@@ -2,10 +2,6 @@ import {useEffect, useState} from 'react'
 import styled from 'styled-components'
 import { Theme } from '@mui/material/styles';
 
-import makeStyles from '@mui/styles/makeStyles';
-import createStyles from '@mui/styles/createStyles';
-import withStyles from '@mui/styles/withStyles';
-
 import MuiAccordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
@@ -40,7 +36,7 @@ import * as Auth from '/components/auth/auth'
 import config from '/config'
 const docker = config.dockerRegistry
 
-
+/*
 export const useAccordionStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
@@ -74,7 +70,7 @@ const StyledToggleButtonGroup = withStyles((theme) => ({
     },
   },
 }))(ToggleButtonGroup)
-
+*/
 
 
 type Props = {

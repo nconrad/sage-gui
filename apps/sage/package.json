@@ -13,12 +13,11 @@
     "url": "git+https://github.com/sagecontinuum/sage-gui.git"
   },
   "dependencies": {
-    "@emotion/react": "^11.4.1",
-    "@emotion/styled": "^11.3.0",
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
     "@mui/icons-material": "^5.5.0",
     "@mui/lab": "^5.0.0-alpha.64",
-    "@mui/material": "^5.5.0",
-    "@mui/styles": "^5.5.0",
+    "@mui/material": "^5.10.4",
     "@types/date-fns": "^2.6.0",
     "chart.js": "^3.7.1",
     "chartjs-adapter-date-fns": "^2.0.0",
@@ -31,8 +30,8 @@
     "mapbox-gl": "^2.6.1",
     "marked": "^4.0.16",
     "notistack": "^1.0.5",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^6.2.2",
     "styled-components": "^5.2.1",
     "wavesurfer.js": "^5.2.0",
@@ -69,5 +68,4 @@
     "ts-jest": "^26.5.3",
     "typescript": "^4.2.3"
   }
-  
 }

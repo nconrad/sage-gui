@@ -1,4 +1,4 @@
-import ReactDom from 'react-dom'
+import {createRoot} from 'react-dom/client'
 import {BrowserRouter, Routes, Route, Navigate, NavLink} from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -110,5 +110,5 @@ const Container = styled.div`
 `
 
 
-
-ReactDom.render(<Sage />, document.getElementById('app'))
+const root = createRoot(document.getElementById('app'))
+root.render(<Sage />)
