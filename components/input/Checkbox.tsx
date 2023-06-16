@@ -3,12 +3,12 @@
  *
  */
 
-import React, {memo, ChangeEvent} from 'react'
+import {memo, ChangeEvent} from 'react'
 import clsx from 'clsx'
-import makeStyles from '@mui/styles/makeStyles'
+// import makeStyles from '@mui/styles/makeStyles'
 import Checkbox from '@mui/material/Checkbox'
 
-
+/*
 const useStyles = makeStyles({
   root: {
     '&:hover': {
@@ -53,6 +53,7 @@ const useStyles = makeStyles({
     },
   },
 })
+*/
 
  type Props = {
    checked: boolean
@@ -64,11 +65,11 @@ const useStyles = makeStyles({
 
 // Inspired by blueprintjs
 const StyledCheckbox = memo(function StyledCheckbox(props: Props) {
-  const classes = useStyles()
+  // const classes = useStyles()
 
   return (
     <Checkbox
-      className={classes.root}
+      // className={classes.root}
       disableRipple
       checkedIcon={<span className={clsx(classes.icon, classes.checkedIcon)} />}
       icon={<span className={classes.icon} />}

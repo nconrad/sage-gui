@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react'
-import { useTheme, alpha } from '@mui/material/styles'
-import makeStyles from '@mui/styles/makeStyles'
+// import { useTheme, alpha } from '@mui/material/styles'
+// import makeStyles from '@mui/styles/makeStyles'
 import Popper from '@mui/material/Popper'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import DoneIcon from '@mui/icons-material/Done'
@@ -20,7 +20,7 @@ const options = [
   { id: 'bar', label: 'Bar' },
 ]
 */
-
+/*
 const useStyles = makeStyles((theme) => ({
   popper: {
     border: '1px solid rgba(27,31,35,.15)',
@@ -97,6 +97,7 @@ const useStyles = makeStyles((theme) => ({
     height: 18,
   },
 }))
+*/
 
 // todo(nc): figure out what is happening with typing here.
 type Option = {

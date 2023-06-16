@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import styled from 'styled-components'
 
-import withStyles from '@mui/styles/withStyles'
+//import withStyles from '@mui/styles/withStyles'
 
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
@@ -39,7 +39,7 @@ const docker = config.dockerRegistry
 
 
 
-
+/*
 const StyledToggleButtonGroup = withStyles((theme) => ({
   grouped: {
     margin: theme.spacing(0.5),
@@ -52,6 +52,7 @@ const StyledToggleButtonGroup = withStyles((theme) => ({
     },
   },
 }))(ToggleButtonGroup)
+*/
 
 
 
@@ -221,6 +222,7 @@ export default function TagList(props: Props) {
               <p className="no-margin">{description}</p><br/>
 
               <div className="flex items-end justify-between">
+                {/*
                 <StyledToggleButtonGroup
                   size="small"
                   value={format}
@@ -237,6 +239,7 @@ export default function TagList(props: Props) {
                     <span className="text-color">{'}'}</span>
                   </ToggleButton>
                 </StyledToggleButtonGroup>
+                */}
 
                 <div>
                   <Tooltip title={showFullConfig ? 'Show only app config' : 'Show all details'}>

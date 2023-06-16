@@ -1,5 +1,5 @@
 
-import { useState, useRef, ElementType } from 'react'
+import { useState, useRef } from 'react'
 import { NavLink, useMatch, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 

@@ -1,6 +1,8 @@
+
+import React from 'react'
 import { lazy, Suspense } from 'react'
-import ReactDom from 'react-dom'
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles'
@@ -230,5 +232,8 @@ const Container = styled.div`
   width: 100%;
 `
 
+const container = document.getElementById('app')
+const root = createRoot(container) // createRoot(container!) if you use TypeScript
+root.render(<Sage />)
 
-ReactDom.render(<Sage />, document.getElementById('app'))
+// ReactDom.render(<Sage />, document.getElementById('app'))

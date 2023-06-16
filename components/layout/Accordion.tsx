@@ -2,8 +2,8 @@
 import styled from 'styled-components'
 
 import MuiAccordion from '@mui/material/Accordion'
-import makeStyles from '@mui/styles/makeStyles'
-import createStyles from '@mui/styles/createStyles'
+// import makeStyles from '@mui/styles/makeStyles'
+// import createStyles from '@mui/styles/createStyles'
 import { Theme } from '@mui/material/styles'
 
 export default styled(MuiAccordion) `
@@ -34,6 +34,7 @@ export default styled(MuiAccordion) `
 `
 
 // todo(nc): refactor to drop makestyles
+/*
 export const useAccordionStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
@@ -53,4 +54,5 @@ export const useAccordionStyles = makeStyles((theme: Theme) =>
     },
   })
 )
+*/
 
