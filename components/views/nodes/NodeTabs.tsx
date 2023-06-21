@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { Outlet, useLocation, useSearchParams, Link } from 'react-router-dom'
 
-import { Tabs, Tab } from '/components/tabs/Tabs'
+import { Tabs, Tab, TabLabel } from '/components/tabs/Tabs'
 import { TabProps } from '@mui/material'
 import Divider from '@mui/material/Divider'
 
@@ -20,21 +20,8 @@ import * as BK from '/components/apis/beekeeper'
 
 import settings from '/apps/project/settings'
 
-type Label = BK.Phase | 'Show All' | 'Sensors'
+// type Label = BK.Phase | 'Show All' | 'Sensors'
 type Counts =  BK.PhaseCounts & {'Show All': number}
-
-
-const label = (
-  icon: JSX.Element,
-  label: Label,
-  counts?: Counts
-) =>
-  <div className="flex items-center">
-    {icon}&nbsp;{label} {
-      counts !== null &&
-        `(${counts ? (counts[label] || 0) : '…'})`
-    }
-  </div>
 
 
 // a tab is rendered with react.clone, so we must explicity pass TabProps
@@ -77,41 +64,41 @@ export default function NodeTabs(props: Props) {
         aria-label="node tabs by node phase"
       >
         <Tab
-          label={label(<CheckIcon />, 'Deployed', counts)}
+          label={<TabLabel icon={<CheckIcon />} label="Deployed" count={counts['Deployed']} />}
           component={Link}
           value={'deployed'}
           to={`${defaultPath}?phase=deployed`}
           replace
         />
         <Tab
-          label={label(<PendingIcon />, 'Pending Deploy', counts)}
+          label={<TabLabel icon={<PendingIcon />} label="Pending Deploy" count={counts['Deployed']} />}
           component={Link}
           value={'pending'}
           to={`${defaultPath}?phase=pending`}
           replace
         />
         <Tab
-          label={label(<ConstructionIcon />, 'Maintenance', counts)}
+          label={<TabLabel icon={<ConstructionIcon />} label="Maintenance" count={counts.Maintenance} />}
           component={Link}
           value={'maintenance'}
           to={`${defaultPath}?phase=maintenance`}
           replace
         />
         <Tab
-          label={label(<WarehouseIcon />, 'Standby', counts)}
+          label={<TabLabel icon={<WarehouseIcon />} label="Standby" count={counts.Standby} />}
           component={Link}
           value={'standby'}
           to={`${defaultPath}?phase=standby`}
         />
         <Tab
-          label={label(<CloudOffIcon />, 'Retired', counts)}
+          label={<TabLabel icon={<CloudOffIcon />} label="Retired" count={counts.Retired} />}
           component={Link}
           value={'retired'}
           to={`${defaultPath}?phase=retired`}
           replace
         />
         <Tab
-          label={label(<ShowAllIcon />, 'Show All', counts)}
+          label={<TabLabel icon={<ShowAllIcon />} label="Show All" count={counts['Show All']} />}
           component={Link}
           value={defaultPath}
           to={defaultPath}
@@ -127,7 +114,7 @@ export default function NodeTabs(props: Props) {
         }
 
         <ConditionalTab
-          label={label(<SensorIcon />, 'Sensors', null)}
+          label={<TabLabel icon={<SensorIcon />} label="Sensors" />}
           component={Link}
           value={'/sensors'}
           to={'/sensors'}

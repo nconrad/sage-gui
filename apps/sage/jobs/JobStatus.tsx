@@ -15,7 +15,6 @@ import Map from '/components/Map'
 import Table, { TableSkeleton } from '/components/table/Table'
 import { queryData } from '/components/data/queryData'
 import { relativeTime } from '/components/utils/units'
-import { Tabs, Tab } from '/components/tabs/Tabs'
 import { useProgress } from '/components/progress/ProgressProvider'
 import { Card } from '/components/layout/Layout'
 
@@ -422,46 +421,6 @@ export default function JobStatus() {
               updateID={updateMap} />
           }
         </MapContainer>
-
-        <Tabs
-          value={view}
-          aria-label="job status tabs"
-        >
-          <Tab
-            label={
-              <div className="flex items-center">
-                <PublicIcon/>&nbsp;All Jobs ({loading ? '...' : counts.public})
-              </div>
-            }
-            value="all-jobs"
-            component={Link}
-            to={`/jobs/all-jobs`}
-            replace
-          />
-          {user &&
-            <Tab
-              label={
-                <div className="flex items-center">
-                  <MyJobsIcon/>&nbsp;My Jobs ({loading ? '...' : counts.mine})
-                </div>
-              }
-              value="my-jobs"
-              component={NavLink}
-              to="/jobs/my-jobs"
-              replace
-            />
-          }
-
-          <Tab
-            label={<div className="flex items-center">
-              <TimelineIcon />&nbsp;Timelines
-            </div>}
-            value="timeline"
-            component={Link}
-            to={`/jobs/timeline`}
-            replace
-          />
-        </Tabs>
 
         <StateFilters
           counts={counts}

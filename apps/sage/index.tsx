@@ -30,6 +30,8 @@ import Node from '/components/views/node/Node'
 import Sensor from '/components/views/sensor/Sensor'
 import SensorList from '/components/views/sensor/SensorList'
 import Apps from './ecr/apps/Apps'
+
+import JobTabs from './jobs/JobTabs'
 import JobStatus from './jobs/JobStatus'
 const CreateJob = lazy(() => import('./jobs/create-job/CreateJob'))
 
@@ -189,9 +191,8 @@ export default function Sage() {
                     <Route path="create-app" element={<RequireAuth><CreateApp /></RequireAuth>} />
                   </Route>
 
-
                   <Route path="/jobs" element={<Navigate to="/jobs/all-jobs" replace />} />
-                  <Route path="jobs" element={<JobStatus />}>
+                  <Route path="/jobs" element={<JobTabs />}>
                     <Route path=":view" element={<JobStatus />} />
                   </Route>
 
