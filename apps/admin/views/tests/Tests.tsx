@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 
+import { Autocomplete, Popper, TextField } from '@mui/material'
+
 import ErrorMsg from '/apps/sage/ErrorMsg'
 import * as BH from '/components/apis/beehive'
 import * as BK from '/components/apis/beekeeper'
@@ -11,6 +13,10 @@ import TimelineChart, { color } from '/components/viz/Timeline'
 import { endOfHour, subDays } from 'date-fns'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '/components/input/Checkbox'
+
+import { reduce, union } from 'lodash'
+import { filterData, getFilterState } from '/components/views/statusDataUtils'
+
 
 const timeOpts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute:'2-digit' }
 const dateOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
@@ -66,22 +72,35 @@ export default function TestView() {
   const navigate = useNavigate()
 
   const phase = params.get('phase') as BK.PhaseTabs
+  // const test = params.get('test')
+  // const testType = params.get('test_type')
+
+  const state = getFilterState(params)
+  const test = state.test[0]
+  const testType = state.test_type[0]
 
 
   const { setLoading } = useProgress()
   const [sanity, setSanity] = useState<{dev: BH.ByMetric, prod: BH.ByMetric}>()
   const [health, setHealth] = useState<{dev: BH.ByMetric, prod: BH.ByMetric}>()
+  const [vsns, setVSNs] = useState<BK.VSN>()
+
+  const [testList, setTestList] = useState()
+  const [testsByVSN, setTestsByVSN] = useState<{dev: BH.ByMetric, prod: BH.ByMetric}>()
 
   const [showBlades, setShowBlades] = useState(false)
 
   const [error, setError]= useState(null)
 
   useEffect(() => {
+
+
+    console.log('fetching overall data')
     setLoading(true)
 
-    const p1 = BH.getNodeHealth(null, '-14d')
-    const p2 = BH.getNodeSanity('-14d')
-    const p3 = BK.getNodeMeta({by: 'vsn'})
+    const p1 = BH.getHealthData({start: '-14d'})
+    const p2 = BH.getSanitySummary({start: '-14d'})
+    const p3 = BK.getNodeMeta()
 
     Promise.all([p1, p2, p3])
       .then(([health, sanity, meta]) => {
@@ -99,13 +118,10 @@ export default function TestView() {
           .sort()
           .reduce((acc, key) => (acc[key] = sanity[key], acc), {})
 
-        // only consider WSN nodes with node_id
-        const includeList = Object.values(meta)
-          .filter(o => o.node_id.length)
-
-        const vsns = includeList
+        const vsns = Object.values(meta)
           .filter(o => phase ? o.node_phase_v3 == BK.phaseMap[phase] : true)
           .map(o => o.vsn)
+        setVSNs(vsns)
 
         let d = reduceByVSNs(health, vsns)
         setHealth(d)
@@ -120,18 +136,80 @@ export default function TestView() {
   }, [setLoading, phase, showBlades])
 
 
+  useEffect(() => {
+    const args = {start: '-2h'}
+
+    // get list of recent metrics for selector
+    Promise.all([BH.getDeviceHealthSummary(args), BH.getSanityData(args)])
+      .then(([health, sanity]) => {
+
+        // get list of recent metrics
+        let d = Object.values(health).map(obj => Object.keys(obj))
+        let uniqHealthStrs = union(...d)
+
+        d = Object.values(sanity).map(obj => Object.keys(Object.values(obj)[0]))
+        let uniqSanityStrs = union(...d)
+
+        const items = [
+          {id: 'all', label: 'all tests'},
+          ...uniqHealthStrs.map(l => ({id: l, label: `${l} (health)`})),
+          ...uniqSanityStrs.map(l => ({id: l, label: `${l} (sanity)`}))
+        ]
+
+        setTestList(items)
+      })
+  }, [])
+
+
+  useEffect(() => {
+    if (!vsns) return
+
+    // const state = getFilterState(params)
+
+
+    const args = {start: '-14d', device: test}
+    BH.getDeviceHealthSummary(args)
+      .then((data) => {
+        console.log('data', data)
+        let d = {}
+        for (const [vsn, obj] of Object.entries(data)) {
+          d[vsn] = obj[test]
+        }
+
+        if (!showBlades) {
+          d = Object.keys(d).reduce((acc, key) =>
+            key.charAt(0) == 'V' ? acc : {...acc, [key]: d[key]}
+          , {})
+        }
+
+        d = reduceByVSNs(d, vsns)
+
+        console.log('final', d)
+        setTestsByVSN(d)
+      })
+  }, [test, phase, vsns, showBlades])
+
+
+
   const handleCellClick = (item) => {
     const vsn = item.meta.vsn
-    navigate(`/node/${vsn}`)
+    navigate(`/node/${vsn}?tab=health`)
   }
 
   const handleLabelClick = (label) => {
-    navigate(`/node/${label}`)
+    navigate(`/node/${label}?tab=health`)
+  }
+
+
+  const handleChange = (val) => {
+    const {id} = val
+    console.log(val)
+    navigate(`?phase=${phase}&test="${id}"&test_type="health"`)
   }
 
   return (
     <Root>
-      <div className="flex justify-between gap">
+      <div className="flex  gap">
         <FormControlLabel
           control={
             <Checkbox
@@ -141,11 +219,25 @@ export default function TestView() {
           }
           label="Show blades"
         />
+
+        {testList &&
+          <Autocomplete
+            options={testList}
+            renderInput={(props) =>
+              <TextField {...props} label="Tests" />}
+            PopperComponent={(props) =>
+              <Popper {...props} />}
+            isOptionEqualToValue={(opt, val) => opt.id == val.id}
+            value={test ? {id: test, label: `${test} (${testType})`} : {id: 'all', label: 'All tests'}}
+            onChange={(evt, val) => handleChange(val)}
+            style={{width: 400}}
+          />
+        }
       </div>
 
       <br/>
 
-      {health &&
+      {health && !test &&
         <>
           <h2>Health</h2>
           <TimelineChart
@@ -164,7 +256,7 @@ export default function TestView() {
 
       <br/>
 
-      {sanity && Object.keys(sanity).find(vsn => sanity[vsn].length) &&
+      {sanity && Object.keys(sanity).find(vsn => sanity[vsn].length) && !test &&
         <>
           <h2>Sanity Tests</h2>
           <TimelineChart
@@ -178,6 +270,23 @@ export default function TestView() {
         </>
       }
       {error && <ErrorMsg>{error}</ErrorMsg>}
+
+      {/* by test results */}
+      {test && testsByVSN &&
+        <>
+          <h2>{test} Health</h2>
+          <TimelineChart
+            data={testsByVSN}
+            startTime={subDays(new Date(), 7)}
+            endTime={endOfHour(new Date())}
+            onRowClick={handleLabelClick}
+            onCellClick={handleCellClick}
+            colorCell={getHealthColor}
+            tooltip={healthTooltip}
+          />
+        </>
+      }
+
     </Root>
   )
 }
