@@ -8,6 +8,7 @@ import ErrorMsg from '/apps/sage/ErrorMsg'
 import * as BH from '/components/apis/beehive'
 import * as BK from '/components/apis/beekeeper'
 
+import { parseQueryStr } from '/components/utils/queryString'
 import { useProgress } from '/components/progress/ProgressProvider'
 import TimelineChart, { color } from '/components/viz/Timeline'
 import { endOfHour, subDays } from 'date-fns'
@@ -15,7 +16,6 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '/components/input/Checkbox'
 
 import { reduce, union } from 'lodash'
-import { filterData, getFilterState } from '/components/views/statusDataUtils'
 
 
 const timeOpts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute:'2-digit' }
@@ -75,10 +75,9 @@ export default function TestView() {
   // const test = params.get('test')
   // const testType = params.get('test_type')
 
-  const state = getFilterState(params)
-  const test = state.test[0]
-  const testType = state.test_type[0]
-
+  const state = parseQueryStr<{test: String, test_type: string}>(params, {multiple: false})
+  const test = state.test
+  const testType = state.test_type
 
   const { setLoading } = useProgress()
   const [sanity, setSanity] = useState<{dev: BH.ByMetric, prod: BH.ByMetric}>()
@@ -93,9 +92,6 @@ export default function TestView() {
   const [error, setError]= useState(null)
 
   useEffect(() => {
-
-
-    console.log('fetching overall data')
     setLoading(true)
 
     const p1 = BH.getHealthData({start: '-14d'})
@@ -133,9 +129,10 @@ export default function TestView() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
 
-  }, [setLoading, phase, showBlades])
+  }, [])
 
 
+  // dropdown
   useEffect(() => {
     const args = {start: '-2h'}
 
@@ -151,7 +148,6 @@ export default function TestView() {
         let uniqSanityStrs = union(...d)
 
         const items = [
-          {id: 'all', label: 'all tests'},
           ...uniqHealthStrs.map(l => ({id: l, label: `${l} (health)`})),
           ...uniqSanityStrs.map(l => ({id: l, label: `${l} (sanity)`}))
         ]
@@ -162,15 +158,13 @@ export default function TestView() {
 
 
   useEffect(() => {
-    if (!vsns) return
-
-    // const state = getFilterState(params)
-
+    if (!vsns || !test) return
+    setTestsByVSN(null)
 
     const args = {start: '-14d', device: test}
     BH.getDeviceHealthSummary(args)
       .then((data) => {
-        console.log('data', data)
+        console.log('data for:', test, data)
         let d = {}
         for (const [vsn, obj] of Object.entries(data)) {
           d[vsn] = obj[test]
@@ -182,9 +176,11 @@ export default function TestView() {
           , {})
         }
 
+        console.log('vsns', vsns, d)
         d = reduceByVSNs(d, vsns)
 
-        console.log('final', d)
+        console.log('after reduction', d)
+
         setTestsByVSN(d)
       })
   }, [test, phase, vsns, showBlades])
@@ -202,14 +198,20 @@ export default function TestView() {
 
 
   const handleChange = (val) => {
+    console.log('val', val)
+    if (!val) {
+      navigate(`?phase=${phase}`)
+      return
+    }
+
     const {id} = val
     console.log(val)
-    navigate(`?phase=${phase}&test="${id}"&test_type="health"`)
+    navigate(`?phase=${phase}&test=${id}&test_type=health`)
   }
 
   return (
     <Root>
-      <div className="flex  gap">
+      <div className="flex gap">
         <FormControlLabel
           control={
             <Checkbox
@@ -227,8 +229,8 @@ export default function TestView() {
               <TextField {...props} label="Tests" />}
             PopperComponent={(props) =>
               <Popper {...props} />}
-            isOptionEqualToValue={(opt, val) => opt.id == val.id}
-            value={test ? {id: test, label: `${test} (${testType})`} : {id: 'all', label: 'All tests'}}
+            isOptionEqualToValue={(opt, val) => val ? opt.id == val.id : false}
+            value={test ? {id: test, label: `${test} (${testType})`} : undefined}
             onChange={(evt, val) => handleChange(val)}
             style={{width: 400}}
           />
@@ -237,39 +239,41 @@ export default function TestView() {
 
       <br/>
 
-      {health && !test &&
-        <>
-          <h2>Health</h2>
-          <TimelineChart
-            data={health}
-            startTime={subDays(new Date(), 7)}
-            endTime={endOfHour(new Date())}
-            onRowClick={handleLabelClick}
-            onCellClick={handleCellClick}
-            colorCell={getHealthColor}
-            tooltip={healthTooltip}
-          />
-        </>
-      }
+          {!test && health &&
+            <>
+              <h2>Health</h2>
+              <TimelineChart
+                data={health}
+                startTime={subDays(new Date(), 7)}
+                endTime={endOfHour(new Date())}
+                onRowClick={handleLabelClick}
+                onCellClick={handleCellClick}
+                colorCell={getHealthColor}
+                tooltip={healthTooltip}
+              />
+              {error && <ErrorMsg>{error}</ErrorMsg>}
+            </>
+          }
 
-      {error && <ErrorMsg>{error}</ErrorMsg>}
+          <br/>
 
-      <br/>
+          {!test && sanity && Object.keys(sanity).find(vsn => sanity[vsn].length) &&
+            <>
+              <h2>Sanity Tests</h2>
+              <TimelineChart
+                data={sanity}
+                startTime={subDays(new Date(), 7)}
+                endTime={endOfHour(new Date())}
+                onRowClick={handleLabelClick}
+                onCellClick={handleCellClick}
+                tooltip={sanityTooltip}
+              />
+              {error && <ErrorMsg>{error}</ErrorMsg>}
+            </>
+          }
 
-      {sanity && Object.keys(sanity).find(vsn => sanity[vsn].length) && !test &&
-        <>
-          <h2>Sanity Tests</h2>
-          <TimelineChart
-            data={sanity}
-            startTime={subDays(new Date(), 7)}
-            endTime={endOfHour(new Date())}
-            onRowClick={handleLabelClick}
-            onCellClick={handleCellClick}
-            tooltip={sanityTooltip}
-          />
-        </>
-      }
-      {error && <ErrorMsg>{error}</ErrorMsg>}
+
+
 
       {/* by test results */}
       {test && testsByVSN &&
