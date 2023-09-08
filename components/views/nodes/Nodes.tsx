@@ -67,7 +67,7 @@ type Option = {
 export default function Nodes() {
   const [params, setParams] = useSearchParams()
 
-  const phase = params.get('phase') as BK.PhaseTabs
+  // const phase = params.get('phase') as BK.PhaseTabs
 
   const query = params.get('query') || ''
   const status = params.get('status')
@@ -143,32 +143,32 @@ export default function Nodes() {
   // updating on state changes
   useEffect(() => {
     if (!data) return
-    updateAll(data, phase)
+    updateAll(data)
 
     // force mapbox rerender and avoid unnecessary rerenders
     setUpdateID(prev => prev + 1)
-  }, [query, status, focus, location, sensor, nodeType, phase])
+  }, [query, status, focus, location, sensor, nodeType])
 
 
   // re-apply updates in case of sorting or such (remove?)
   useEffect(() => {
     if (!data) return
-    updateAll(data, phase)
-  }, [data, phase])
+    updateAll(data)
+  }, [data])
 
 
   // filter data (todo: this can probably be done more efficiently)
-  const updateAll = (d, phase) => {
+  const updateAll = (d) => {
     const filterState = getFilterState(params)
     setFilterState(filterState)
 
     let filteredData = d
-    if (phase)
-      filteredData = d.filter(obj => obj.node_phase_v3 == BK.phaseMap[phase])
-
     filteredData = queryData(filteredData, query)
     filteredData = filterData(filteredData, filterState)
     setFiltered(filteredData)
+
+    // if dropdowns have been populated already, we are done.
+    // if (sensors) return
 
     setStatuses(getOptions(data, 'status'))
     setFocuses(getOptions(data, 'focus'))
@@ -203,7 +203,7 @@ export default function Nodes() {
 
   const handleRemoveFilters = () => {
     setNodeType('all')
-    setParams(phase ? {phase} : {}, {replace: true})
+    //setParams(phase ? {phase} : {}, {replace: true})
   }
 
 

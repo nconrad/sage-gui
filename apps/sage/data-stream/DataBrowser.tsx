@@ -229,7 +229,7 @@ const getPythonSnippet = (query: BH.Params)  => {
 
 function getAppMenus() {
   return BH.getData({
-    start: `-1d`,
+    start: `-2h`,
     tail: 1,
     filter: {
       plugin: `.*`

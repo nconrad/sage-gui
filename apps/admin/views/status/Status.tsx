@@ -165,6 +165,9 @@ export default function StatusView() {
     // sort by not reporting to place not reporting in top layer of map
     setFiltered(filteredData.sort((a) => a.status == 'not reporting' ? 1 : -1))
 
+    // if dropdowns have been populated already, we are done.
+    // if (locations) return
+
     setStatuses(getOptions(data, 'status'))
     setProjects(getOptions(data, 'project'))
     setFocuses(getOptions(data, 'focus'))

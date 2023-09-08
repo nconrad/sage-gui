@@ -1,4 +1,4 @@
-import { useEffect, useState, cloneElement } from 'react'
+import { useEffect, useState, cloneElement, memo } from 'react'
 import PropTypes from 'prop-types'
 import { useTheme, styled } from '@mui/material/styles'
 import Popper from '@mui/material/Popper'
@@ -66,9 +66,9 @@ const StyledPopper = styled(Popper)(({ theme }) => ({
   color: theme.palette.mode === 'light' ? '#24292e' : '#c9d1d9',
   backgroundColor: theme.palette.mode === 'light' ? '#fff' : '#1c2128',
   '& .title': {
-     backgroundColor: theme.palette.mode === 'light' ? '#f5f5f5' : '#1c2128',
-     color: theme.palette.mode === 'light' ? '#24292e' : '#c9d1d9',
-     padding: 10
+    backgroundColor: theme.palette.mode === 'light' ? '#f5f5f5' : '#1c2128',
+    color: theme.palette.mode === 'light' ? '#24292e' : '#c9d1d9',
+    padding: 10
   }
 }))
 
@@ -125,10 +125,10 @@ type Props = {
 })
 
 
-export default function FilterMenu(props: Props) {
+export default memo(function FilterMenu(props: Props) {
   const {
     ButtonComponent,
-    options,
+    options = [],
     multiple = true,
     label,
     onChange,
@@ -140,6 +140,7 @@ export default function FilterMenu(props: Props) {
 
   const [anchorEl, setAnchorEl] = useState(null)
   const [value, setValue] = useState(props.value)
+  // const [opts, setOpts] = useState(props.options)
   const theme = useTheme()
 
 
@@ -191,6 +192,7 @@ export default function FilterMenu(props: Props) {
               }}
               value={value}
               onChange={(event, newValue) => {
+                console.log('onchange', newValue)
                 onChange(newValue)
 
                 if (disableCloseOnSelect === false) {
@@ -226,7 +228,7 @@ export default function FilterMenu(props: Props) {
                   </li>
                 )}}
               options={
-                multiple && noSelectedSort == false ?
+                multiple && noSelectedSort == false && value ?
                   [...options].sort((a, b) => {
                     // Display the selected labels first.
                     let ai = value.indexOf(a.id)
@@ -238,8 +240,8 @@ export default function FilterMenu(props: Props) {
                   :
                   options
               }
-              getOptionLabel={(option) => {
-                return option.label
+              getOptionLabel={(opt: Option) => {
+                return opt.label || ''
               }}
               isOptionEqualToValue={(opt, val) => {
                 return multiple ? opt.id == val : opt.id == val.id
@@ -258,4 +260,6 @@ export default function FilterMenu(props: Props) {
       </StyledPopper>
     </>
   )
-}
+}, (prev, next) => {
+  return JSON.stringify(prev.value) === JSON.stringify(next.value)
+})
