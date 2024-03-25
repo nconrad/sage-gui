@@ -3,7 +3,7 @@ export const url = config.beehive
 
 import { handleErrors } from '../fetch-utils'
 import { groupBy, mapValues, flatten } from 'lodash'
-
+import { startOfHour, endOfHour, subHours } from 'date-fns'
 
 import * as BK from '/components/apis/beekeeper'
 
@@ -31,6 +31,7 @@ export type Params = {
   filter?: {
     [tag: string]: string
   }
+  experimental_func?: 'mean' | 'min' | 'max' | 'sum' | 'count'
 }
 
 
@@ -517,3 +518,25 @@ export async function getPluginCounts(props: PluginCountsProps) : Promise<Record
   const data = await getData(params)
   return data
 }
+
+
+export async function getHourlyPluginCounts(props: PluginCountsProps) : Promise<Record[]> {
+  const {start, end, vsn, plugin, tail} = props
+
+  const d = new Date()
+  const params = {
+    start: subHours(d, -2),
+    end: startOfHour(d),
+    filter: {
+      ...(vsn && {vsn}),
+      ...(plugin && {plugin})
+    },
+    experimental_func: 'count'
+  }
+
+  const data = await getData(params)
+  return data
+}
+
+
+

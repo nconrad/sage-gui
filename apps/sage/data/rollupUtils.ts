@@ -16,6 +16,12 @@ export type FetchRollupProps = {
 
 export function fetchRollup(props: FetchRollupProps) {
   const {start, end, vsn, plugin} = props
+
+  BH.getHourlyPluginCounts({start, end, vsn, plugin})
+    .then(data => {
+      console.log('data', data)
+    })
+
   return BH.getPluginCounts({start, end, vsn, plugin})
     .then(d => {
       const data = parseData({data: d, ...props})
