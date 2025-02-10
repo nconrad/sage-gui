@@ -50,7 +50,7 @@ const NavMenu = () => {
   return (
     <NavItems>
       <NavItem label="Nodes" to="/nodes?phase=deployed" />
-      {/* <NavItem label="AI Experiments" to="/ai/descriptions" /> */}
+      <NavItem label="AI Experiments" to="/ai/descriptions" />
       <NavItem label="Factory" to="/surya" />
       <NavItem label="Metrics" to="/metrics" />
       <NavItem

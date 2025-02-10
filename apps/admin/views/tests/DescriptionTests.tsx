@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import { FormControlLabel, Button, Tooltip, RadioGroup, FormLabel, FormControl } from '@mui/material'
 import DownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import AutoIcon from '@mui/icons-material/AutoFixHighOutlined'
+import { Image as ImageIcon } from '@mui/icons-material'
 
 import * as BK from '/components/apis/beekeeper'
 import * as DA from './description-api'
@@ -16,6 +17,7 @@ import { bytesToSizeSI } from '/components/utils/units'
 import Filter from '/apps/sage/common/FacetFilter'
 
 import { WordCloudChart } from 'chartjs-chart-wordcloud'
+import ErrorMsg from '/apps/sage/ErrorMsg'
 
 const ITEMS_INITIALLY = 10
 const ITEMS_PER_PAGE = 5
@@ -28,6 +30,10 @@ type Model = {
 }
 
 const DATASETS: Model[] = [{
+  name: 'Florence-2-Large:0.77B',
+  file: 'summary-florence-2-5-2025.json',
+  date: '2-05-2025'
+},{
   name: 'LLaVa:7b',
   file: 'summary-llava7b-4-11-2024.json',
   date: '4-11-2024'
@@ -59,10 +65,49 @@ function Image(props: ImageProps) {
   const epoch = Number(url.slice(url.lastIndexOf('/') + 1, url.lastIndexOf('-')))
   const timestamp = new Date(epoch / 1000000).toLocaleString()
 
+  const [loading, setLoading] = useState(false)
+  const [blobURL, setBlobURL] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    setLoading(true)
+    fetch(url, { signal, credentials: 'include' })
+      .then(async res => {
+        if(res.status !== 200) {
+          const obj = await res.json()
+          throw new Error(`${res.status}: ${obj.detail}`)
+        }
+        return res
+      })
+      .then((res) => res.blob())
+      .then((blob) => setBlobURL(URL.createObjectURL(blob)))
+      .catch((error) => setError(error))
+      .finally(() => setLoading(false))
+
+    // Cancel the fetch request on any dependency change
+    return () => controller.abort()
+  }, [url])
+
+
   return (
     <ImageRoot>
       <h3><Link to={`/node/${title}`}>{title}</Link></h3>
-      <img src={url} />
+      {/* <img src={url} /> */}
+
+      {loading && 'loading...'}
+      {blobURL && <img src={blobURL} />}
+      {!blobURL && !loading &&
+        <ImagePlaceholder className="flex column">
+          <div>
+            <ImageIcon />
+          </div>
+          <p>{error?.message}</p>
+        </ImagePlaceholder>
+      }
+
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div>{timestamp}</div>
@@ -79,6 +124,25 @@ const ImageRoot = styled.div`
   img {
     max-width: 350px;
   }
+`
+
+const ImagePlaceholder = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 250px; /* You can adjust the width */
+  height: 250px; /* You can adjust the height */
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+
+  & svg {
+    color: #aaa;
+    width: 50px; /* Icon width */
+    height: 50px; /* Icon height */
+  }
+
 `
 
 
@@ -179,6 +243,7 @@ type Option = {
 export default function ImageTests() {
   const [vsns, setVSNs] = useState<BK.VSN[]>()
   const [images, setImages] = useState<string[]>()
+  const [error, setError] = useState()
 
   const [selectedModel, setSelectedModel] = useState<Model['file']>(DATASETS[0].file)
 
@@ -208,6 +273,7 @@ export default function ImageTests() {
         setOptions(options)
         updateCounts(data, selected)
       })
+      .catch((err) => setError(err))
   }, [selectedModel])
 
 
@@ -350,6 +416,9 @@ export default function ImageTests() {
         </Top>
 
         <ImageListing>
+          {error &&
+            <ErrorMsg>{error.message}</ErrorMsg>
+          }
           {wordCloud &&
             <div>
               <canvas id="canvas" ref={ref}></canvas>
