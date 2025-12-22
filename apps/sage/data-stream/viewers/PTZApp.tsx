@@ -1,13 +1,16 @@
 import { ImageCard } from '../../image-search/ImageCard'
-import { type Record } from '/components/apis/beehive'
+import { type Record as BeehiveRecord } from '/components/apis/beehive'
 import { Chip } from '@mui/material'
-import { parseTimestamp, parseFilename } from './parsers'
+import { parseTimestamp, parseFilename, type ParsedFilename } from './parsers'
 
+type ExtendedRecord = BeehiveRecord & {
+  parsedFilename: ParsedFilename
+}
 
-function groupByDebugSets(records: Record[]) {
+function groupByDebugSets(records: ExtendedRecord[]) {
   const items = records.sort((a, b) => {
-    const t1 = parseFilename(a.meta.filename).datetime
-    const t2 = parseFilename(b.meta.filename).datetime
+    const t1 = a.parsedFilename.datetime
+    const t2 = b.parsedFilename.datetime
 
     return parseTimestamp(t1) > parseTimestamp(t2) ? 1 : -1
   })
@@ -16,11 +19,7 @@ function groupByDebugSets(records: Record[]) {
   let group = []
 
   items?.forEach((record) => {
-    const {meta} = record
-    const {filename} = meta
-
-    const parsed = parseFilename(filename)
-    if (parsed.isDebug) {
+    if (record.parsedFilename.isDebug) {
       groups.push(group)
       group = []
       group.push(record)
@@ -29,15 +28,19 @@ function groupByDebugSets(records: Record[]) {
     }
   })
 
+  if (group.length > 0) {
+    groups.push(group)
+  }
+
   return groups
 }
 
 
-function renderRecord(record: Record, i: number) {
-  const {meta, timestamp} = record
-  const {filename, model} = meta
+function renderRecord(record: ExtendedRecord, i: number) {
+  const {meta, timestamp, parsedFilename} = record
+  const {model} = meta
 
-  const {pan, tilt, zoom, label, confidence, datetime, isDebug} = parseFilename(filename)
+  const {pan, tilt, zoom, label, confidence, datetime, isDebug} = parsedFilename
   const imageTimestamp = parseTimestamp(datetime)
 
   return (
@@ -77,7 +80,7 @@ function renderRecord(record: Record, i: number) {
 }
 
 
-function renderGroup(group: Record[]) {
+function renderGroup(group: ExtendedRecord[]) {
   return (
     <div className="flex">
       {group.map((record, i) => renderRecord(record, i))}
@@ -87,19 +90,25 @@ function renderGroup(group: Record[]) {
 
 
 type Props = {
-  data: Record[]
-  searchString: string
+  data: BeehiveRecord[]
+  activeFilters: boolean
 }
 
 export default function PTZYolo(props: Props) {
-  const {data, searchString} = props
+  const {data, activeFilters} = props
 
-  const groups = groupByDebugSets(data)
+  // Parse filenames once for all records
+  const extendedData: ExtendedRecord[] = data.map(record => ({
+    ...record,
+    parsedFilename: parseFilename(record.meta.filename)
+  }))
 
-  if (searchString) {
+  const groups = groupByDebugSets(extendedData)
+
+  if (activeFilters) {
     return (
       <div className="flex flex-wrap">
-        {data.map((record, i) => renderRecord(record, i))}
+        {extendedData.map((record, i) => renderRecord(record, i))}
       </div>
     )
   }
@@ -118,19 +127,103 @@ export default function PTZYolo(props: Props) {
 }
 
 
-export function handleAppSearch(data: Record[], searchQuery: string) {
-  const newData = data.filter(record => {
+
+
+/**
+ * plugin functions for filtering
+ */
+
+export function applyFilters(
+  data: BeehiveRecord[],
+  confidenceFilter: [number, number],
+  selectedLabels: string[],
+  selectedModels: string[],
+  searchQuery: string = ''
+) {
+  return data.filter(record => {
     const {meta} = record
-    const {filename} = meta
+    const {filename, model} = meta
     const parsed = parseFilename(filename)
 
-    return searchQuery.split('|')
-      .some(part => {
-        if (!part.trim().length)
-          return false
-        return parsed.label?.toLowerCase().includes(part.trim().toLowerCase())
-      })
+    // Debug images don't have confidence values, so exclude them when filtering
+    if (parsed.isDebug) {
+      return false
+    }
+
+    // Apply search query filter
+    if (searchQuery.trim().length > 0) {
+      const searchMatch = searchQuery.split('|')
+        .some(part => {
+          if (!part.trim().length) return false
+          return parsed.label?.toLowerCase().includes(part.trim().toLowerCase())
+        })
+      if (!searchMatch) return false
+    }
+
+    const conf = Number(parsed.confidence)
+    const confidenceMatch = conf >= confidenceFilter[0] && conf <= confidenceFilter[1]
+
+    // Apply label filter if selected
+    const labelMatch = selectedLabels.length === 0 || selectedLabels.includes(parsed.label || '')
+
+    // Apply model filter if selected
+    const modelMatch = selectedModels.length === 0 || selectedModels.includes(model || '')
+
+    return confidenceMatch && labelMatch && modelMatch
+  })
+}
+
+
+
+export function getFormModel(data: BeehiveRecord[]) {
+  const labelCounts: Record<string, number> = {}
+  const modelCounts: Record<string, number> = {}
+  let minConf = Infinity
+  let maxConf = -Infinity
+
+  data.forEach(record => {
+    const {meta} = record
+    const {filename, model} = meta
+    const parsed = parseFilename(filename)
+
+    // Count labels
+    if (parsed.label) {
+      labelCounts[parsed.label] = (labelCounts[parsed.label] || 0) + 1
+    }
+
+    // Count models
+    if (model) {
+      modelCounts[model] = (modelCounts[model] || 0) + 1
+    }
+
+    // Calculate confidence range
+    if (parsed.confidence) {
+      const confNum = Number(parsed.confidence)
+      if (confNum < minConf) {
+        minConf = confNum
+      }
+      if (confNum > maxConf) {
+        maxConf = confNum
+      }
+    }
   })
 
-  return newData
+  // Sort labels by count descending
+  const labels = Object.entries(labelCounts).sort((a, b) => b[1] - a[1])
+
+  // Sort models by count descending
+  const models = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])
+
+  // Set default confidence range if no values found
+  const confidenceRange = minConf === Infinity || maxConf === -Infinity
+    ? {minConf: 0, maxConf: 1}
+    : {minConf, maxConf}
+
+  return {
+    labels,
+    models,
+    confidenceRange
+  }
 }
+
+

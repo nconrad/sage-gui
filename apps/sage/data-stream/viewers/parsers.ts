@@ -19,7 +19,7 @@ export type ParsedFilename = {
   tilt?: number
   zoom?: number
   label?: string
-  confidence?: string
+  confidence?: number
   datetime: string
   isDebug: boolean
   version: 'v1' | 'v2' | 'v3' | 'v4'
@@ -62,7 +62,7 @@ export function parseFilename(filename: string): ParsedFilename {
     } else {
       // scan_000_000_01_window_conf0.98_20251213_235020.jpg
       const confidencePart = parts.find(p => p.startsWith('conf'))
-      const confidence = confidencePart?.replace('conf', '')
+      const confidence = confidencePart ? Number(confidencePart.replace('conf', '')) : undefined
       const confIndex = parts.indexOf(confidencePart!)
       const label = parts.slice(4, confIndex).join('_')
 
@@ -100,7 +100,7 @@ export function parseFilename(filename: string): ParsedFilename {
     // v2 or v3: 294_15_4_support_hose_conf0.99_20251119_214038.jpg
     const [pan, tilt, zoom] = parts
     const confidencePart = parts.find(p => p.startsWith('conf'))
-    const confidence = confidencePart?.replace('conf', '')
+    const confidence = confidencePart ? Number(confidencePart.replace('conf', '')) : undefined
     const confIndex = parts.indexOf(confidencePart!)
     const label = parts.slice(3, confIndex).join('_')
 
@@ -118,7 +118,7 @@ export function parseFilename(filename: string): ParsedFilename {
 
   // v1: traffic_light_conf0.35_20250309_115225.jpg
   const confidencePart = parts.find(p => p.startsWith('conf'))
-  const confidence = confidencePart?.replace('conf', '')
+  const confidence = confidencePart ? Number(confidencePart.replace('conf', '')) : undefined
   const confIndex = parts.indexOf(confidencePart!)
   const label = parts.slice(0, confIndex).join('_')
 

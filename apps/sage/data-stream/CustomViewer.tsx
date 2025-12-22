@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {type Record} from '/components/apis/beehive'
-import { TablePagination, TextField, IconButton, InputAdornment } from '@mui/material'
+import {
+  TablePagination, TextField, IconButton, InputAdornment, Slider, Typography,
+  Select, MenuItem, FormControl, InputLabel, Chip, Box, Button, Autocomplete } from '@mui/material'
 import { useSearchParams } from 'react-router-dom'
 
-import PTZYolo, { handleAppSearch } from './viewers/PTZApp'
+import PTZYolo, {
+  applyFilters, getFormModel
+} from './viewers/PTZApp'
 
+import FilterOpts from '../../../components/input/StyledTimeOpts'
 import { ToggleButtonGroup, ToggleButton } from '@mui/material'
-import { AnalyticsOutlined, TableRowsOutlined, Clear } from '@mui/icons-material'
+import { AnalyticsOutlined, TableRowsOutlined, Clear, FilterList, ExpandLess, ExpandMore } from '@mui/icons-material'
 import useDebounce from '/components/hooks/useDebounce'
 
 import JsonURL from '@jsonurl/jsonurl'
+import { has } from 'lodash'
 
 
 type Props = {
@@ -25,15 +31,43 @@ export default function CustomViewer(props: Props) {
 
   // Initialize query from URL params
   const viewerParamsStr = params.get('viewer-params')
-  const initialQuery = viewerParamsStr ? (JsonURL.parse(viewerParamsStr) as {query?: string})?.query || '' : ''
+  const viewerParams = viewerParamsStr ? (JsonURL.parse(viewerParamsStr) as {
+    query?: string
+    confidenceMin?: number
+    confidenceMax?: number
+    labels?: string[]
+    models?: string[]
+    showAdvanced?: boolean
+  }) : {}
+
+  const initialQuery = viewerParams?.query || ''
+  const initialShowAdvanced = viewerParams?.showAdvanced || false
 
   const [query, setQuery] = useState(initialQuery)
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery)
-  const [filteredData, setFilteredData] = useState<Record[]>()
+  const [filteredData, setFilteredData] = useState<Record[]>(data)
+  const [showAdvanced, setShowAdvanced] = useState(initialShowAdvanced)
 
-  useEffect(() => {
-    setFilteredData(data)
-  }, [data])
+  // Get form model data (labels, models, confidence range) from data
+  const formModel = useMemo(() => getFormModel(data || []), [data])
+  const {labels: labelCounts, models: modelCounts, confidenceRange} = formModel
+
+  // Initialize confidence filter from URL params or data range
+  const initialConfidenceFilter: [number, number] = [
+    viewerParams?.confidenceMin ?? confidenceRange.minConf,
+    viewerParams?.confidenceMax ?? confidenceRange.maxConf
+  ]
+  const [confidenceFilter, setConfidenceFilter] = useState<[number, number]>(initialConfidenceFilter)
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(viewerParams?.labels || [])
+  const [selectedModels, setSelectedModels] = useState<string[]>(viewerParams?.models || [])
+
+  const hasActiveFilters = () => {
+    return !!(debouncedQuery ||
+      selectedLabels.length > 0 ||
+      selectedModels.length > 0 ||
+      confidenceFilter[0] !== confidenceRange.minConf ||
+      confidenceFilter[1] !== confidenceRange.maxConf)
+  }
 
   const debouncedSearch = useDebounce(() => {
     setDebouncedQuery(query)
@@ -43,52 +77,50 @@ export default function CustomViewer(props: Props) {
     debouncedSearch()
   }, [debouncedSearch, query])
 
-  // Update URL params when query changes
+
+  // Update URL params when any filter changes
   useEffect(() => {
-    if (query) {
-      const viewerParams = JsonURL.stringify({query})
+    if (hasActiveFilters()) {
+      const params: any = {}
+      if (query) params.query = query
+      if (showAdvanced) params.showAdvanced = showAdvanced
+      if (confidenceFilter[0] !== confidenceRange.minConf) params.confidenceMin = confidenceFilter[0]
+      if (confidenceFilter[1] !== confidenceRange.maxConf) params.confidenceMax = confidenceFilter[1]
+      if (selectedLabels.length > 0) params.labels = selectedLabels
+      if (selectedModels.length > 0) params.models = selectedModels
+
+      const viewerParams = JsonURL.stringify(params)
       setParams(prev => {
         const newParams = new URLSearchParams(prev)
         newParams.set('viewer-params', viewerParams)
         return newParams
-      })
+      }, { replace: true })
     } else {
       setParams(prev => {
         const newParams = new URLSearchParams(prev)
         newParams.delete('viewer-params')
         return newParams
-      })
+      }, { replace: true })
     }
-  }, [query])
+  }, [
+    query, showAdvanced, confidenceFilter, selectedLabels,
+    selectedModels, confidenceRange.minConf, confidenceRange.maxConf
+  ])
 
+
+  // Apply all filters whenever any filter value changes
   useEffect(() => {
-    if (debouncedQuery.trim().length === 0) {
-      setFilteredData(data)
+    if (!hasActiveFilters()) {
       return
     }
-    handleSearch()
-  }, [debouncedQuery])
 
+    const filtered = applyFilters(data, confidenceFilter, selectedLabels, selectedModels, debouncedQuery)
+    setFilteredData(filtered)
 
-  const handleSearch = () => {
-    let newData
-    if (handleAppSearch) {
-      console.log('using advanced search', debouncedQuery)
-      newData = handleAppSearch(data, debouncedQuery)
-    } else {
-      // basic search on filenames
-      newData = data.filter(record => {
-        const {meta} = record
-        const {filename} = meta
-
-        // Check if label matches search query (case-insensitive)
-        return filename.toLowerCase().includes(debouncedQuery.toLowerCase())
-      })
+    if (debouncedQuery.trim().length > 0) {
+      setPage(0)
     }
-
-    setFilteredData(newData)
-    setPage(0)
-  }
+  }, [debouncedQuery, confidenceFilter, selectedLabels, selectedModels, data])
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value)
@@ -105,25 +137,25 @@ export default function CustomViewer(props: Props) {
               selected={showViewer}
               onChange={() => onViewModeChange(true)}
             >
-              <AnalyticsOutlined />Custom Viewer
+              <AnalyticsOutlined fontSize="small" />Custom Viewer
             </ToggleButton>
             <ToggleButton
               value="show-table"
               selected={!showViewer}
               onChange={() => onViewModeChange(false)}
             >
-              <TableRowsOutlined /> Table
+              <TableRowsOutlined fontSize="small"/> Table
             </ToggleButton>
           </ToggleButtonGroup>
 
           {showViewer &&
             <TextField
-              label="Search for label"
+              label="Search for label(s)"
               variant="outlined"
               sx={{width: 300}}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter groups by label..."
+              placeholder={'e.g., "deer|elk|animal"'}
               InputProps={{
                 endAdornment: query && (
                   <InputAdornment position="end">
@@ -139,7 +171,20 @@ export default function CustomViewer(props: Props) {
               }}
             />
           }
+
+          {showViewer &&
+            <Button
+              startIcon={showAdvanced ? <ExpandLess /> : <ExpandMore />}
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              sx={{marginLeft: 2}}
+            >
+              {showAdvanced ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+          }
         </div>
+
+
+
 
         {showViewer &&
           <TablePagination
@@ -152,10 +197,135 @@ export default function CustomViewer(props: Props) {
         }
       </div>
 
+      {showViewer && showAdvanced &&
+        <div className="flex items-end">
+          <Autocomplete
+            multiple
+            options={labelCounts.map(([label]) => label)}
+            value={selectedLabels}
+            onChange={(_, newValue) => setSelectedLabels(newValue)}
+            size="small"
+            sx={{width: 250, marginRight: 2}}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Filter by Label"
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option}
+                  label={option.replace(/_/g, ' ')}
+                  size="small"
+                />
+              ))
+            }
+            renderOption={(props, option) => {
+              const count = labelCounts.find(([label]) => label === option)?.[1] || 0
+              return (
+                <li {...props} key={option}>
+                  {option.replace(/_/g, ' ')} ({count})
+                </li>
+              )
+            }}
+          />
+
+          <Autocomplete
+            multiple
+            options={modelCounts.map(([model]) => model)}
+            value={selectedModels}
+            onChange={(_, newValue) => setSelectedModels(newValue)}
+            size="small"
+            sx={{width: 250, marginRight: 2}}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Filter by Model"
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option}
+                  label={option}
+                  size="small"
+                />
+              ))
+            }
+            renderOption={(props, option) => {
+              const count = modelCounts.find(([model]) => model === option)?.[1] || 0
+              return (
+                <li {...props} key={option}>
+                  {option} ({count})
+                </li>
+              )
+            }}
+          />
+
+
+          <FormControl sx={{width: 400}}>
+            <Typography variant="caption" gutterBottom>
+                Confidence Range
+            </Typography>
+            <div className="flex items-center gap">
+              <TextField
+                type="number"
+                value={confidenceFilter[0]}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value)
+                  if (!isNaN(val) && val <= confidenceFilter[1]) {
+                    setConfidenceFilter([val, confidenceFilter[1]])
+                  }
+                }}
+                inputProps={{
+                  min: confidenceRange.minConf,
+                  max: confidenceFilter[1],
+                  step: 0.01
+                }}
+                size="small"
+                sx={{width: 80}}
+              />
+              <Slider
+                value={confidenceFilter}
+                onChange={(_, newValue) => setConfidenceFilter(newValue as [number, number])}
+                valueLabelDisplay="auto"
+                min={confidenceRange.minConf}
+                max={confidenceRange.maxConf}
+                step={0.01}
+                sx={{flex: 1}}
+              />
+              <TextField
+                type="number"
+                value={confidenceFilter[1]}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value)
+                  if (!isNaN(val) && val >= confidenceFilter[0]) {
+                    setConfidenceFilter([confidenceFilter[0], val])
+                  }
+                }}
+                inputProps={{
+                  min: confidenceFilter[0],
+                  max: confidenceRange.maxConf,
+                  step: 0.01
+                }}
+                size="small"
+                sx={{width: 80}}
+              />
+            </div>
+          </FormControl>
+        </div>
+      }
+
+
       {showViewer &&
         <PTZYolo
           data={filteredData.slice(page * 20, (page + 1) * 20)}
-          searchString={query}
+          activeFilters={hasActiveFilters()}
         />
       }
 
