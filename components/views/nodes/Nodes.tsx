@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { styled } from '@mui/material'
-import { useSearchParams, useLocation, Link } from 'react-router-dom'
+import { useSearchParams, useLocation, Link, useParams } from 'react-router-dom'
 
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
@@ -22,7 +22,7 @@ import {
 
 import Table, { type Column } from '/components/table/Table'
 import FilterMenu from '/components/FilterMenu'
-import Map from '/components/Map'
+import MapGL from '/components/Map'
 import QueryViewer from '/components/QueryViewer'
 import { useProgress } from '/components/progress/ProgressProvider'
 import { queryData } from '/components/data/queryData'
@@ -30,7 +30,9 @@ import { useIsSuper } from '/components/auth/PermissionProvider'
 
 import * as BK from '/components/apis/beekeeper'
 import * as BH from '/components/apis/beehive'
+import * as User from '/components/apis/user'
 
+import Auth from '/components/auth/auth'
 import settings from '/components/settings'
 import Checkbox from '/components/input/Checkbox'
 import { vsnLinkWithEdit } from './nodeFormatters'
@@ -49,8 +51,9 @@ const filterOn = (data: BK.Node[], key: string) =>
   data.filter(o => o[key]?.toLowerCase() == settings[key]?.toLowerCase())
 
 
-function getProjectNodes() {
-  const {project, focus, vsns} = settings
+function getProjectNodes(projectParam?: string) {
+  const {project: settingsProject, focus, vsns} = settings
+  const project = projectParam || settingsProject
 
   return BK.getNodes({project})
     .then((data) => {
@@ -77,14 +80,18 @@ type Option = {
 }
 
 export default function Nodes() {
+  const { sageProject } = useParams()
   const [params, setParams] = useSearchParams()
   const {pathname} = useLocation()
   const {isSuper} = useIsSuper()
 
+  // Check if we're on the user/:user/nodes route
+  const isMyNodes = Auth.isSignedIn && !!pathname.match(/\/user\/[^/]+\/nodes/)
+
   const phase = params.get('phase') as BK.PhaseTabs
 
   const query = params.get('query') || ''
-  const show_all = params.get('show_all') ? true : false
+  const show_all = params.has('show_all') ? params.get('show_all') === 'true' : isMyNodes
   const all_nodes = pathname == '/all-nodes'
   const project = params.get('project')
   const focus = params.get('focus')
@@ -113,9 +120,56 @@ export default function Nodes() {
 
   const [selected, setSelected] = useState<BK.NodeState[]>([])
   const [lastUpdate, setLastUpdate] = useState<Date>(null)
+  const [vsnToProjectsMap, setVsnToProjectsMap] = useState<Map<string, string>>(null)
+  const [userProjectsList, setUserProjectsList] = useState<User.Project[]>(null)
+  const [userVsns, setUserVsns] = useState<string[]>(null)
 
   const dataRef = useRef(null)
   dataRef.current = data
+
+  const userProjectsLoadedRef = useRef(false)
+  const myNodesShowAllInitializedRef = useRef(false)
+
+
+  // Fetch user projects once when in MyNodes view
+  useEffect(() => {
+    if (!isMyNodes) {
+      // Reset the ref when leaving MyNodes view
+      userProjectsLoadedRef.current = false
+      return
+    }
+
+    if (userProjectsLoadedRef.current) return
+
+    userProjectsLoadedRef.current = true
+
+    // Set show_all=true only on first visit to MyNodes during this session
+    if (!myNodesShowAllInitializedRef.current && !params.has('show_all')) {
+      params.set('show_all', 'true')
+      setParams(params, {replace: true})
+      myNodesShowAllInitializedRef.current = true
+    }
+
+    User.listMyProjects().then(({vsns, projects}) => {
+      // Store the user's projects list
+      setUserProjectsList(projects)
+      setUserVsns(vsns)
+
+      // Create mapping of VSN to projects (comma-separated list)
+      const vsnProjectMap = new Map<string, string>()
+      projects.forEach(project => {
+        project.nodes.forEach(node => {
+          const existing = vsnProjectMap.get(node.vsn)
+          if (existing) {
+            vsnProjectMap.set(node.vsn, `${existing}, ${project.name}`)
+          } else {
+            vsnProjectMap.set(node.vsn, project.name)
+          }
+        })
+      })
+      setVsnToProjectsMap(vsnProjectMap)
+    })
+  }, [isMyNodes])
 
 
   // load data
@@ -123,13 +177,28 @@ export default function Nodes() {
     let done = false
     let handle
 
+    // Skip if we're in MyNodes view but userVsns hasn't been loaded yet
+    if (isMyNodes && !userVsns) {
+      return
+    }
+
     // get latest metrics
     function ping() {
       handle = setTimeout(async () => {
         if (done) return
         const metrics = await BH.getNodeData()
 
-        setData(mergeMetrics(dataRef.current, metrics, null, null))
+        let updatedData = mergeMetrics(dataRef.current, metrics, null, null)
+
+        // Add projects field to each node when isMyNodes
+        if (isMyNodes && vsnToProjectsMap) {
+          updatedData = updatedData.map(node => ({
+            ...node,
+            projects: vsnToProjectsMap.get(node.vsn) || ''
+          }))
+        }
+
+        setData(updatedData)
         setLastUpdate(new Date())
 
         // recursive
@@ -138,11 +207,27 @@ export default function Nodes() {
     }
 
     setLoading(true)
-    Promise.all([getProjectNodes(), BH.getNodeData()])
+
+    const dataPromise = isMyNodes && userVsns
+      ? getProjectNodes(sageProject).then(nodes =>
+        nodes.filter(node => userVsns.includes(node.vsn))
+      )
+      : getProjectNodes(sageProject)
+
+    Promise.all([dataPromise, BH.getNodeData()])
       .then(([state, metrics]) => {
         if (done) return
 
-        const allData = mergeMetrics(state, metrics, null, null)
+        let allData = mergeMetrics(state, metrics, null, null)
+
+        // Add projects field to each node when isMyNodes
+        if (isMyNodes && vsnToProjectsMap) {
+          allData = allData.map(node => ({
+            ...node,
+            projects: vsnToProjectsMap.get(node.vsn) || ''
+          }))
+        }
+
         setData(allData)
         setLastUpdate(new Date())
         ping()
@@ -153,23 +238,27 @@ export default function Nodes() {
       done = true
       clearTimeout(handle)
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sageProject, pathname, isMyNodes, userVsns])
 
   // updating on state changes
   useEffect(() => {
     if (!data) return
     updateAll(data, phase)
-
-    // force mapbox rerender and avoid unnecessary rerenders
-    setUpdateID(prev => prev + 1)
   }, [query, project, focus, city, state, sensor, phase, show_all, all_nodes])
 
 
   // re-apply updates in case of sorting or such (remove?)
-  useEffect(() => {
+  // Use useLayoutEffect to update map synchronously before paint
+  useLayoutEffect(() => {
     if (!data) return
     updateAll(data, phase)
   }, [data, phase])
+
+  // Update map when selection changes
+  useEffect(() => {
+    setUpdateID(prev => prev + 1)
+  }, [selected])
 
 
   useEffect(() => {
@@ -183,15 +272,49 @@ export default function Nodes() {
 
   }, [isSuper])
 
+  // Add projects column when in MyNodes view
+  useEffect(() => {
+    if (!isMyNodes || !vsnToProjectsMap) return
+
+    setCols(prev => {
+      // Check if projects column already exists
+      const hasProjectsCol = prev.some(col => col.id === 'projects')
+      if (hasProjectsCol) return prev
+
+      // Add projects column after VSN column
+      const vsnIdx = prev.findIndex(o => o.id == 'vsn')
+      const projectsCol = {
+        id: 'projects',
+        label: 'Project(s)',
+        format: (_, obj) => {
+          const projectsStr = vsnToProjectsMap.get(obj.vsn)
+          if (!projectsStr) return '-'
+
+          const projectNames = projectsStr.split(', ')
+          return (
+            <>
+              {projectNames.map((name, idx) => (
+                <span key={name}>
+                  <Link to={`/project/${encodeURIComponent(name)}/members`}>{name}</Link>
+                  {idx < projectNames.length - 1 && ', '}
+                </span>
+              ))}
+            </>
+          )
+        },
+        dlFormat: (_, obj) => vsnToProjectsMap.get(obj.vsn) || ''
+      }
+      prev.splice(vsnIdx + 1, 0, projectsCol)
+      return [...prev]
+    })
+  }, [isMyNodes, vsnToProjectsMap])
+
   useEffect(() => {
     setCols(prev => {
       const idx = prev.findIndex(o => o.id == 'status')
       prev.splice(idx, 1, {...prev[idx], hide: all_nodes})
       return [...prev]
     })
-
-    // force mapbox rerender and avoid unnecessary rerenders
-    setUpdateID(prev => prev + 1)
   }, [all_nodes])
 
   // filter data (todo: this can probably be done more efficiently)
@@ -205,13 +328,32 @@ export default function Nodes() {
     if (!show_all && !all_nodes)
       filteredData = filteredData.filter(obj => obj.status == 'reporting')
 
-
-    filteredData = queryData(filteredData, query)
-    filteredData = filterData(filteredData, filterState)
+    // Handle projects filter separately for MyNodes (comma-separated values)
+    if (isMyNodes && filterState.projects?.length) {
+      filteredData = filteredData.filter(node => {
+        const nodeProjects = node.projects || ''
+        return filterState.projects.some(projectName =>
+          nodeProjects.split(', ').includes(projectName)
+        )
+      })
+      // Remove projects from filterState so filterData doesn't process it again
+      const {projects, ...remainingFilters} = filterState
+      filteredData = queryData(filteredData, query)
+      filteredData = filterData(filteredData, remainingFilters)
+    } else {
+      filteredData = queryData(filteredData, query)
+      filteredData = filterData(filteredData, filterState)
+    }
 
     setFiltered(filteredData)
+    setUpdateID(prev => prev + 1) // Update map immediately after filtering
 
-    setProjects(getOptions(data, 'project'))
+    // Use user's projects list when isMyNodes, otherwise extract from data
+    if (isMyNodes && userProjectsList) {
+      setProjects(userProjectsList.map(p => ({id: p.name, label: p.name})))
+    } else {
+      setProjects(getOptions(data, 'project'))
+    }
     setFocuses(getOptions(data, 'focus'))
     setCities(getOptions(data, 'city'))
     setStates(getOptions(data, 'state'))
@@ -247,6 +389,7 @@ export default function Nodes() {
     const checked = evt.target.checked
 
     if (checked) params.set('show_all', 'true')
+    else if (isMyNodes) params.set('show_all', 'false')
     else params.delete('show_all')
     setParams(params, {replace: true})
   }
@@ -259,7 +402,6 @@ export default function Nodes() {
 
   const handleSelect = (sel) => {
     setSelected(sel.objs.length ? sel.objs : [])
-    setUpdateID(prev => prev + 1)
   }
 
 
@@ -282,20 +424,21 @@ export default function Nodes() {
   return (
     <Root>
       <Overview className="flex">
-        {filtered && !selected?.length &&
-          <Title>
-            {filtered.length} Node{filtered.length == 1 ? '' : 's'} | <small>
-              {lastUpdate?.toLocaleTimeString('en-US')}
-            </small>
-          </Title>
-        }
-
-        {filtered &&
-          <Map
-            data={selected.length ? getSubset(selected, filtered) : filtered}
-            markerClass={all_nodes ? 'blue-dot' : null}
-            updateID={updateID}
-          />
+        {filtered && filtered.length > 0 &&
+          <MapContainer>
+            {!selected?.length &&
+              <Title>
+                {filtered.length} Node{filtered.length == 1 ? '' : 's'} | <small>
+                  {lastUpdate?.toLocaleTimeString('en-US')}
+                </small>
+              </Title>
+            }
+            <MapGL
+              data={selected.length ? getSubset(selected, filtered) : filtered}
+              markerClass={all_nodes ? 'blue-dot' : null}
+              updateID={updateID}
+            />
+          </MapContainer>
         }
       </Overview>
 
@@ -366,11 +509,11 @@ export default function Nodes() {
             }
             middleComponent={
               <FilterControls className="flex items-center">
-                {projects &&
+                {projects && isMyNodes &&
                   <FilterMenu
                     label="Project"
                     options={projects}
-                    value={filterState.project}
+                    value={filterState.projects}
                     onChange={vals => handleFilterChange('project', vals as Option[])}
                     noSelectedSort
                   />
@@ -467,6 +610,11 @@ const Overview = styled('div')`
   z-index: 100;
   padding: 10px 0;
   border-bottom: 1px solid ${props => props.theme.palette.divider};
+`
+
+const MapContainer = styled('div')`
+  position: relative;
+  width: 100%;
 `
 
 const Title = styled('h2')`

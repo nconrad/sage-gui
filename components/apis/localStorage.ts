@@ -8,7 +8,8 @@ const keys = [
   'sage-assistant',
   'mui-color-scheme-dark',
   'mui-color-scheme-light',
-  'mui-mode'
+  'mui-mode',
+  'nodeTabs.state'
 ]
 
 

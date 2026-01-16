@@ -1,4 +1,3 @@
-import settings from '/components/settings'
 
 const measurements = {
   AQT530: {
@@ -288,7 +287,7 @@ const shortUnits = {
   'volts'
 */
 
-let skipSensorPreview = [
+const skipSensorPreview = [
   'microphone',
   'gps',
   'bme280',
@@ -298,7 +297,5 @@ let skipSensorPreview = [
   'MFR_node_MNLA4O102',
 ]
 
-if (settings.project == 'CROCUS')
-  skipSensorPreview = [...skipSensorPreview, 'bme680']
 
 export { measurements, shortUnits, skipSensorPreview }

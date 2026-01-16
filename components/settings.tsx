@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { type Node } from '/components/apis/beekeeper'
-import CrocusLogo from './projects/logos/CROCUS-logo.svg'
+
 
 
 // use env variable to load corresponding config below
@@ -31,13 +31,6 @@ const configs : Configs = {
   'dawn': {
     project: 'DAWN',
     initialViewState: { latitude: 41.88, longitude: -87.66, zoom: 12.3 }
-  },
-  'crocus': {
-    Logo: () => <CrocusLogo />,
-    alt: 'CROCUS',
-    project: 'CROCUS',
-    url: 'https://crocus-urban.org',
-    initialViewState: { latitude: 41.88, longitude: -87.65, zoom: 8.7 }
   },
   'neon-mdp': {
     vsns: ['W038', 'W01D', 'W01F', 'V008'],

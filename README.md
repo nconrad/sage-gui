@@ -49,7 +49,7 @@ npm run build -w sage
 The [config](./components/settings.ts) for a project page is controlled with the env variable `SAGE_UI_PROJECT`.  I.e.,
 
 ```
-SAGE_UI_PROJECT=crocus npm start -w project
+SAGE_UI_PROJECT=apiary npm start -w project
 ```
 
 #### Third-party tokens

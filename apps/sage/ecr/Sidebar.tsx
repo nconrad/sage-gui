@@ -41,11 +41,6 @@ const Root = styled('div')`
   max-width: 75px;
 `
 
-
-
-const primaryColor = 'rgb(28, 140, 201)'
-
-
 const Item = styled(NavLink)`
   display: flex;
   flex-direction: column;
@@ -70,7 +65,7 @@ const Item = styled(NavLink)`
   }
 
   &.active {
-    border-right: 3px solid ${primaryColor};
+    border-right: 3px solid ${({ theme }) => theme.palette.primary.main};
     border-top: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#333' : '#eee'};
     border-bottom: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#333' : '#eee'};
     margin-top: -1px;
@@ -80,7 +75,7 @@ const Item = styled(NavLink)`
   }
 
   &.active .MuiSvgIcon-root {
-    color: ${primaryColor};
+    color: ${({ theme }) => theme.palette.primary.main};
   }
 `
 

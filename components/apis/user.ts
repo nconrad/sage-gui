@@ -135,6 +135,24 @@ export async function listMyNodes() : Promise<MyNode[]> {
   return data
 }
 
+export type Project = {
+  name: string
+  nodes: {
+    vsn: VSN
+    mac: string
+  }[]
+  members: {
+    username: string
+    name: string
+  }[]
+}
+
+
+export async function listMyProjects() : Promise<{projects: Project[], vsns: VSN[]}> {
+  const data = await get(`${url}/users/${user}/projects`)
+
+  return data
+}
 
 export async function listNodesWithPerm(perm: AccessPerm) : Promise<VSN[]> {
   const nodes = await listMyNodes()

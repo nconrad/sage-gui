@@ -28,6 +28,9 @@ import Nodes from '/components/views/nodes/Nodes'
 import Node from '/components/views/node/Node'
 import Sensor from '/components/views/sensor/Sensor'
 import SensorList from '/components/views/sensor/SensorList'
+import MyProjects from '/components/views/nodes/MyProjects'
+import MyTeams from '/components/views/nodes/MyTeams'
+import Members from '/components/views/nodes/Members'
 import Apps from './ecr/apps/Apps'
 import Jobs from './jobs/Jobs'
 import JobStatus from './jobs/JobStatus'
@@ -48,6 +51,7 @@ import DevAccess from '/components/account/DevAccess'
 import AllocationRequest from './allocations/AllocationRequest'
 
 import Assistant from './assist/Assistant'
+import Dashboard from './dashboard/Dashboard'
 
 import TestDownload from './fiddle/test-download'
 
@@ -73,9 +77,15 @@ const {project} = settings
 const NavMenu = () => {
   return (
     <NavItems>
+      {Auth.isSignedIn &&
+        <NavItem
+          label="Dash"
+          to={`/user/${Auth.user}/dash`}
+        />
+      }
       <NavItem
         label="Nodes"
-        to="/nodes"
+        to={Auth.isSignedIn ? `/user/${Auth.user}/nodes` : '/nodes'}
       />
       <NavItem
         label="App Catalog"
@@ -209,9 +219,14 @@ export default function Sage() {
                     <Route path='/' element={<MetaRoute />}>
 
                       <Route path="/" element={<NodeTabs />}>
-                        <Route path="nodes" element={<Nodes />} />
+                        <Route path="nodes/:sageProject?" element={<Nodes />} />
                         <Route path="all-nodes" element={<Nodes />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
+                        <Route path="user/:user/nodes/:sageProject?" element={<Nodes />} />
+                        <Route path="user/:user/projects" element={<MyProjects />} />
+                        <Route path="user/:user/teams" element={<MyTeams />} />
+                        <Route path="user/:user/dash" element={<Dashboard />} />
+                        <Route path="project/:projectName/members" element={<Members />} />
                       </Route>
                       <Route path="sensors/:name" element={<Sensor />} />
 

@@ -16,7 +16,7 @@ const columns: Column<Node>[] = [{
 }, {
   id: 'vsn',
   label: 'Node',
-  format: formatters.vsnLink // vsnLinkWithEdit is used if permissions are found
+  format: formatters.vsnLinkWithEdit // vsnLinkWithEdit is used if permissions are found
 }, {
   id: 'type',
   label: 'Type',
@@ -41,12 +41,18 @@ const columns: Column<Node>[] = [{
   hide: true
 }, {
   id: 'state',
-  label: 'State'
+  label: 'State',
+  format: (val, obj) =>
+    <div className="flex items-center">
+      <formatters.GPSIcon obj={obj} />&nbsp;
+      {val || '-'}
+    </div>
 }, {
   id: 'gps',
   label: 'GPS',
   format: formatters.gps,
-  dlFormat: (_, obj) => (obj.lat && obj.lng) ? `${obj.lat}, ${obj.lng}` : ''
+  dlFormat: (_, obj) => (obj.lat && obj.lng) ? `${obj.lat}, ${obj.lng}` : '',
+  hide: true
 }, {
   id: 'alt',
   label: 'Elevation (m)',
@@ -58,7 +64,17 @@ const columns: Column<Node>[] = [{
   id: 'sensors',
   label: 'Sensors',
   format: (val) => <formatters.HardwareList data={val} path="/sensors/" />,
-  dlFormat: (val) => val.map(v => v.hw_model).join(', ')
+  dlFormat: (val) => val.map(v => v.hw_model).join(', '),
+  hide: true
+}, {
+  id: 'sensorIcons',
+  label: 'Sensor Capabilities',
+  format: (_, obj) => <formatters.SensorIcons data={obj.sensors} />,
+  dlFormat: (_, obj) => {
+    const caps = new Set()
+    obj.sensors?.forEach(s => s.capabilities?.forEach(c => caps.add(c)))
+    return Array.from(caps).sort().join(', ')
+  }
 }, {
   id: 'sensorModels',
   label: 'Sensor Models',

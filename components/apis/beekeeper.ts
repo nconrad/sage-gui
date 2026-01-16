@@ -68,7 +68,7 @@ export type Node = {
   id: number,
   vsn: VSN
   name: string
-  project: 'SAGE' | 'CROCUS' | 'APIARY' | 'VTO' | 'DAWN'
+  project: 'SGT' | 'SAGE' | 'APIARY' | 'VTO' | 'DAWN' | 'NIREM'
   focus: 'Rural' | 'Urban' | 'Training and Development' | string
   partner: string
   type: 'WSN' | 'Blade'
@@ -103,6 +103,7 @@ export type Node = {
   // added client-side convenience
   lat: number,
   lng: number,
+  hasLiveGPS: boolean
   hasStaticGPS: boolean
   modem_carrier_name: 'AT&T' | string // todo(nc): move to backend
   top_camera: string                  // hw_model

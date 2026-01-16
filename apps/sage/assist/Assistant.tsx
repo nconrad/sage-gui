@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import Sidebar from './Sidebar'
+import Sidebar from '/components/layout/WideSidebar'
 
 import Prompt from './Prompt'
 

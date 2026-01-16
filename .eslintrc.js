@@ -15,7 +15,7 @@ module.exports = {
   plugins: ['@typescript-eslint'],
   root: true,
   rules: {
-    'indent': ['error', 2],
+    'indent': ['error', 2, { 'ignoredNodes': ['TemplateLiteral', 'TemplateLiteral *'] }],
     'brace-style': ['error', '1tbs', {allowSingleLine: true}],
     'linebreak-style': ['error','unix'],
     'quotes': ['error', 'single', {'allowTemplateLiterals': true}],

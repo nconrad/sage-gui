@@ -1,16 +1,17 @@
 import  { useState, useRef, ReactNode } from 'react'
-import styled from 'styled-components'
+import { styled } from '@mui/material'
+import { SxProps, Theme } from '@mui/material'
 
-const Container = styled.div`
+const Container = styled('div')`
   display: flex;
 `
 
-const Sidebar = styled.div<{width: number}>`
+const Sidebar = styled('div')<{width: number}>`
   position: relative;
   display: flex;
   flex-direction: column;
-  background-color: #fff;
-  border-right: 1px solid #ddd;
+  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : 'rgb(255, 255, 255)'};
+  border-right: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#444' : '#ddd'};
   width: ${(props) => props.width}px;
   overflow-y: hidden;
   padding: 1rem;
@@ -21,24 +22,25 @@ const Sidebar = styled.div<{width: number}>`
   }
 `
 
-const Resizer = styled.div`
+const Resizer = styled('div')`
   width: 2px;
   cursor: col-resize;
   background-color: #ccc;
 `
 
 type Props = {
-  children: ReactNode
+  children: ReactNode,
+  sx?: SxProps<Theme>
 }
 
 const ResizableSidebar = (props: Props) => {
-  const {children} = props
+  const {children, sx} = props
 
   const [width, setWidth] = useState(330)
   const resizerRef = useRef(null)
   const sidebarRef = useRef(null)
 
-  const onMouseDown = (e) => {
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
@@ -56,7 +58,7 @@ const ResizableSidebar = (props: Props) => {
 
   return (
     <Container>
-      <Sidebar ref={sidebarRef} width={width}>
+      <Sidebar ref={sidebarRef} width={width} sx={sx}>
         <div style={{ flexGrow: 1 }}>{children}</div>
       </Sidebar>
       <Resizer ref={resizerRef} onMouseDown={onMouseDown} />

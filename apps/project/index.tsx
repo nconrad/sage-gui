@@ -18,7 +18,7 @@ import NavBar, { NavItems } from '/components/nav-bar/NavBar'
 import NavItem from '/components/nav-bar/NavItem'
 // import Progress from '/components/progress/LazyLoading'
 
-import NodeTabs from '/components/views/nodes/NodeTabs'
+import NodeTabs from '/components/views/nodes/_LegacyNodeTabs'
 import Nodes from '/components/views/nodes/Nodes'
 import Node from '/components/views/node/Node'
 import Sensor from '/components/views/sensor/Sensor'

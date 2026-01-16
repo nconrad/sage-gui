@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import { styled } from '@mui/material'
 import Clipboard from '/components/utils/Clipboard'
 
 import * as formatters from '/components/views/nodes/nodeFormatters'
@@ -24,7 +24,7 @@ const GpsClipboard = (props: Props) => {
 }
 
 
-const Root = styled.div`
+const Root = styled('div')`
   display: inline-block;
 
   .gps-icon {
