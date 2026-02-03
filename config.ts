@@ -1,10 +1,41 @@
-// no trailing slashes in API endpoints, please
-
-const prod = {
-  home: 'https://sagecontinuum.org',           // used for "home" of other apps
-  portal: 'https://portal.sagecontinuum.org',  // used for PortalLink component
-
+type Config = {
   // endpoints
+  beehive: string
+  beekeeper: string
+  ecr: string
+  es: string
+  jenkins: string
+  auth: string
+  imageSearch: string
+  deviceRegistration: string
+  experimentalData: string
+
+  // links
+  home: string
+  portal: string
+  dockerRegistry: string
+  influxDashboard: string
+  adminURL: string
+  wifireData: string
+  dataDownload: string
+  docs: string
+  contactUs: string
+  officeHours: string
+  labs: string
+
+  disableMaps?: boolean
+  notice?: Notice    // optional notice banner displayed site-wide
+  noticeURL?: string // optional banner config pulled from github
+}
+
+type Notice = {
+  message: string,
+  severity: 'info' | 'warning' | 'error' | 'success'
+}
+
+
+const prod: Config = {
+  // endpoints; no trailing slashes in API endpoints
   beehive: 'https://data.sagecontinuum.org/api/v1',
   beekeeper: 'https://api.sagecontinuum.org',
   ecr: 'https://ecr.sagecontinuum.org/api',
@@ -16,6 +47,8 @@ const prod = {
   experimentalData:'https://portal.sagecontinuum.org/experimental-data',
 
   // links
+  home: 'https://sagecontinuum.org',           // used for "home" of other apps
+  portal: 'https://portal.sagecontinuum.org',  // used for PortalLink component
   dockerRegistry: 'registry.sagecontinuum.org',
   influxDashboard: 'https://influxdb.sagecontinuum.org/orgs/6aa7e344b342bea3/dashboards',
   adminURL: 'https://admin.sagecontinuum.org',
@@ -28,7 +61,7 @@ const prod = {
 }
 
 
-const dev = {
+const dev: Config = {
   ...prod,
   auth: 'http://0.0.0.0:8000',
   // es: 'https://es-dev.sagecontinuum.org/api/v1',
@@ -37,17 +70,6 @@ const dev = {
 }
 
 
-type Notice = {
-  message: string,
-  severity: 'info' | 'warning' | 'error' | 'success'
-}
-
-type Config = {
-  [key: string]: string | boolean | Notice
-  disableMaps: boolean
-  notice?: Notice
-  noticeURL?: string // optional URL to fetch notice from
-}
 
 const config: Config = {
   ...(process.env.SAGE_UI_SERVICE_CONFIG == 'dev' ? dev : prod),

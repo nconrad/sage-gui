@@ -68,7 +68,8 @@ export type Node = {
   id: number,
   vsn: VSN
   name: string
-  project: 'SGT' | 'SAGE' | 'APIARY' | 'VTO' | 'DAWN' | 'NIREM'
+  // todo(nc): improve filtering with union types
+  project: 'SAGE,SGT' | 'SGT' | 'SAGE' | 'APIARY' | 'VTO' | 'DAWN' | 'NIREM'
   focus: 'Rural' | 'Urban' | 'Training and Development' | string
   partner: string
   type: 'WSN' | 'Blade'
