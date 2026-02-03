@@ -2,13 +2,13 @@ import { useState } from 'react'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
-import { IconButton, Badge, Tooltip, Popover, List, ListItem, ListItemText } from '@mui/material'
+import { IconButton, Badge, Tooltip, Popper, ClickAwayListener, List, ListItem, ListItemText } from '@mui/material'
 
 import {
   BugReportOutlined, CheckRounded, CheckCircleRounded, ReportProblemOutlined,
   PendingOutlined, ErrorOutlineRounded, RoomOutlined, Edit, LaunchRounded,
-  Thermostat, Compress, GasMeterOutlined, Grain, Mic, Router, Air,
-  CameraAltOutlined, OpacityOutlined, Whatshot, ScienceOutlined,
+  Thermostat, Compress, GasMeterOutlined, Grain, Mic, RouterOutlined, Air,
+  CameraAltOutlined, OpacityOutlined, Whatshot, ScienceOutlined, MoreOutlined
 } from '@mui/icons-material'
 
 import WbCloudyIcon from '/assets/weathermix.svg'
@@ -134,7 +134,8 @@ const capabilityIcons = {
   Biological: BugReportOutlined,
   Chemical: ScienceOutlined,
   Accelerometer: Level,
-  lorawan: Router,
+  lorawan: RouterOutlined,
+  'Additional Sensors/Capabilities': MoreOutlined // generic icon for uncategorized sensors
 }
 
 const capabilityLabels = {
@@ -146,41 +147,53 @@ const capabilityLabels = {
 
 export function SensorIcons({data}) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const [popoverSensors, setPopoverSensors] = useState<{hw_model: string, isThermal: boolean}[]>([])
+  const [popoverSensors, setPopoverSensors] = useState<{hw_model: string, name: string, isThermal: boolean}[]>([])
   const [popoverCapability, setPopoverCapability] = useState<string>('')
 
   // Count sensors by capability and track thermal cameras
-  const capabilityCounts = new Map<string, string[]>()
+  const capabilityCounts = new Map<string, typeof data>()
   const sensorCapabilityMap = new Map<string, Set<string>>()
 
   if (!data || data.length === 0) return <>-</>
 
   data.forEach(sensor => {
     sensorCapabilityMap.set(sensor.hw_model, new Set(sensor.capabilities))
-    sensor.capabilities?.forEach(cap => {
-      // Merge Camera and Thermal Camera into Camera
-      const normalizedCap = cap === 'Thermal Camera' ? 'Camera' : cap
-      if (!capabilityCounts.has(normalizedCap)) {
-        capabilityCounts.set(normalizedCap, [])
+
+    // If sensor has no capabilities, add to Special
+    if (!sensor.capabilities || sensor.capabilities.length === 0) {
+      if (!capabilityCounts.has('Additional Sensors/Capabilities')) {
+        capabilityCounts.set('Additional Sensors/Capabilities', [])
       }
-      if (!capabilityCounts.get(normalizedCap).includes(sensor.hw_model)) {
-        capabilityCounts.get(normalizedCap).push(sensor.hw_model)
+      if (!capabilityCounts.get('Additional Sensors/Capabilities').some(s => s.hw_model === sensor.hw_model)) {
+        capabilityCounts.get('Additional Sensors/Capabilities').push(sensor)
       }
-    })
+    } else {
+      sensor.capabilities?.forEach(cap => {
+        // Merge Camera and Thermal Camera into Camera
+        const normalizedCap = cap === 'Thermal Camera' ? 'Camera' : cap
+        if (!capabilityCounts.has(normalizedCap)) {
+          capabilityCounts.set(normalizedCap, [])
+        }
+        if (!capabilityCounts.get(normalizedCap).some(s => s.hw_model === sensor.hw_model)) {
+          capabilityCounts.get(normalizedCap).push(sensor)
+        }
+      })
+    }
   })
 
   const hasThermalCamera = data.some(sensor =>
     sensor.capabilities?.includes('Thermal Camera')
   )
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>, capability: string, sensors: string[]) => {
+  const handleClick = (event: React.MouseEvent<HTMLElement>, capability: string, sensors: typeof data) => {
     event.stopPropagation()
     if (sensors && sensors.length > 0) {
       setAnchorEl(event.currentTarget)
       // For Camera capability, check if each sensor is thermal
-      const sensorsWithType = sensors.map(hw_model => ({
-        hw_model,
-        isThermal: sensorCapabilityMap.get(hw_model)?.has('Thermal Camera') || false
+      const sensorsWithType = sensors.map(sensor => ({
+        hw_model: sensor.hw_model,
+        name: sensor.name,
+        isThermal: sensorCapabilityMap.get(sensor.hw_model)?.has('Thermal Camera') || false
       }))
       setPopoverSensors(sensorsWithType)
       setPopoverCapability(capability)
@@ -205,14 +218,19 @@ export function SensorIcons({data}) {
           const isPresent = count > 0
           const label = capabilityLabels[capability] || capability
 
+          // Don't show Additional Sensors/Capabilities icon if there aren't any
+          if (capability === 'Additional Sensors/Capabilities' && !isPresent) {
+            return null
+          }
+
           // Use ThermalCameraIcon for Camera if any thermal cameras exist
           const DisplayIcon = (capability === 'Camera' && hasThermalCamera) ? ThermalCameraIcon : Icon
 
           // For Camera capability, count regular vs thermal
           let cameraBreakdown = ''
           if (capability === 'Camera' && isPresent) {
-            const thermalCount = sensors.filter(hw_model =>
-              sensorCapabilityMap.get(hw_model)?.has('Thermal Camera')
+            const thermalCount = sensors.filter(sensor =>
+              sensorCapabilityMap.get(sensor.hw_model)?.has('Thermal Camera')
             ).length
             const regularCount = count - thermalCount
             if (thermalCount > 0 && regularCount > 0) {
@@ -225,21 +243,52 @@ export function SensorIcons({data}) {
           return (
             <Tooltip
               key={capability}
+              disableInteractive
+              enterDelay={0}
               title={
                 isPresent ? (
                   <>
                     <div style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px'
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                      gap: '16px',
+                      marginBottom: '8px',
+                      paddingBottom: '8px',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.3)'
                     }}>
-                      <span>
+                      <span style={{fontSize: '1.1em'}}>
                         <strong>{label}</strong> {count > 1 && `(${count} total)`}
                       </span>
                       {cameraBreakdown && (
-                        <strong style={{whiteSpace: 'nowrap'}}>{cameraBreakdown.trim().replace(/[()]/g, '')}</strong>
+                        <strong style={{
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.9em'}}
+                        >
+                          {cameraBreakdown.trim().replace(/[()]/g, '')}
+                        </strong>
                       )}
                     </div>
-                    <small>{sensors.join(', ')}</small>
-                    <br/><small><i>Click for details</i></small>
+                    <div style={{
+                      marginTop: '8px',
+                      display: 'flex',
+                      gap: '12px',
+                      flexWrap: 'wrap',
+                      alignItems: 'flex-start'
+                    }}>
+                      {sensors.map((sensor, idx) => (
+                        <>
+                          {idx > 0 && <span style={{opacity: 0.5}}>|</span>}
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                            <strong>{sensor.hw_model}</strong>
+                            {sensor.hw_model.toLowerCase() !== sensor.name.toLowerCase() && (
+                              <small style={{opacity: 0.8, whiteSpace: 'nowrap'}}>{sensor.name}</small>
+                            )}
+                          </div>
+                        </>
+                      ))}
+                    </div>
+                    <small style={{marginTop: '8px', display: 'block', opacity: 0.7}}><i>Click for details</i></small>
                   </>
                 ) : (
                   <><strong>{label}</strong><br/><small>(not present)</small></>
@@ -263,10 +312,11 @@ export function SensorIcons({data}) {
                   opacity: isPresent ? 1 : 0.3,
                   filter: isPresent ? 'none' : 'grayscale(100%)',
                   cursor: isPresent ? 'pointer' : 'default',
-
                   color: isPresent ? theme.palette.mode === 'dark' ?
-                    '#fff' : '#000' : theme.palette.mode === 'dark' ? '#555' : '#aaa'
-
+                    '#fff' : '#000' : theme.palette.mode === 'dark' ? '#555' : '#aaa',
+                  '&:hover': isPresent ? {
+                    color: theme.palette.primary.main
+                  } : {}
                 })}>
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>
                   <DisplayIcon
@@ -295,60 +345,59 @@ export function SensorIcons({data}) {
         })}
       </div>
 
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-      >
-        <List dense sx={{ minWidth: 200, py: 1 }}>
-          <ListItem sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
-            <ListItemText
-              primary={capabilityLabels[popoverCapability] || popoverCapability}
-              primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9em' }}
-            />
-          </ListItem>
-          {popoverSensors.map((sensor, idx) => {
-            const SensorIcon = popoverCapability === 'Camera'
-              ? (sensor.isThermal ? ThermalCameraIcon : CameraAltOutlined)
-              : null
+      <ClickAwayListener onClickAway={handleClose}>
+        <Popper
+          open={open}
+          anchorEl={anchorEl}
+          placement="bottom-end"
+          disablePortal={false}
+        >
+          <List dense sx={{ minWidth: 200, py: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
+            <ListItem sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+              <ListItemText
+                primary={capabilityLabels[popoverCapability] || popoverCapability}
+                primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9em' }}
+              />
+            </ListItem>
+            {popoverSensors.map((sensor, idx) => {
+              const SensorIcon = popoverCapability === 'Camera'
+                ? (sensor.isThermal ? ThermalCameraIcon : CameraAltOutlined)
+                : null
 
-            return (
-              <ListItem
-                key={idx}
-                component={Link}
-                to={`/sensors/${sensor.hw_model}`}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                    textDecoration: 'none'
-                  }
-                }}
-              >
-                {SensorIcon && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 24 }}>
-                    <SensorIcon fontSize="small" />
-                  </Box>
-                )}
-                <ListItemText
-                  primary={sensor.hw_model}
-                  primaryTypographyProps={{ fontSize: '0.85em' }}
-                />
-              </ListItem>
-            )
-          })}
-        </List>
-      </Popover>
+              return (
+                <ListItem
+                  key={idx}
+                  component={Link}
+                  to={`/sensors/${sensor.hw_model}`}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      textDecoration: 'none'
+                    }
+                  }}
+                >
+                  {SensorIcon && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 24 }}>
+                      <SensorIcon fontSize="small" />
+                    </Box>
+                  )}
+                  <ListItemText
+                    primary={sensor.hw_model}
+                    secondary={sensor.name}
+                    slotProps={{
+                      primary: { fontSize: '0.9em', fontWeight: 600 },
+                      secondary: { fontSize: '0.75em' }
+                    }}
+                  />
+                </ListItem>
+              )
+            })}
+          </List>
+        </Popper>
+      </ClickAwayListener>
     </>
   )
 }
