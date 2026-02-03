@@ -7,6 +7,7 @@ import Table from '/components/table/Table'
 import * as User from '/components/apis/user'
 import ErrorMsg from '/apps/sage/ErrorMsg'
 
+import Auth from '/components/auth/auth'
 import config from '/config'
 const { contactUs } = config
 
@@ -33,7 +34,7 @@ const columns = [{
     <>
       {projectNames.map((projectName, i) => (
         <span key={projectName}>
-          <Link to={`/projects/${projectName}/members`}>{projectName}</Link>
+          <Link to={`/user/${Auth.user}/teams/${encodeURIComponent(projectName)}`}>{projectName}</Link>
           {i < projectNames.length - 1 && ', '}
         </span>
       ))}

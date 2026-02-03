@@ -8,6 +8,7 @@ import Table from '/components/table/Table'
 import * as User from '/components/apis/user'
 import ErrorMsg from '/apps/sage/ErrorMsg'
 
+import Auth from '/components/auth/auth'
 import config from '/config'
 const { contactUs } = config
 
@@ -24,7 +25,7 @@ const columns = [{
   id: 'members',
   label: 'Team Members',
   format: (members, obj) =>
-    <Link to={`/project/${obj.name}/members`}>
+    <Link to={`/user/${Auth.user}/teams/${obj.name}`}>
       {members.length} {members.length === 1 ? 'member' : 'members'}
     </Link>
 }]

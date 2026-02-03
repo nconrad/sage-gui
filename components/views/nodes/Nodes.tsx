@@ -295,7 +295,7 @@ export default function Nodes() {
             <>
               {projectNames.map((name, idx) => (
                 <span key={name}>
-                  <Link to={`/project/${encodeURIComponent(name)}/members`}>{name}</Link>
+                  <Link to={`/user/${Auth.user}/teams/${encodeURIComponent(name)}`}>{name}</Link>
                   {idx < projectNames.length - 1 && ', '}
                 </span>
               ))}

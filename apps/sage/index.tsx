@@ -222,11 +222,11 @@ export default function Sage() {
                         <Route path="nodes/:sageProject?" element={<Nodes />} />
                         <Route path="all-nodes" element={<Nodes />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
+                        <Route path="user/:user/dash" element={<Dashboard />} />
                         <Route path="user/:user/nodes/:sageProject?" element={<Nodes />} />
                         <Route path="user/:user/projects" element={<MyProjects />} />
                         <Route path="user/:user/teams" element={<MyTeams />} />
-                        <Route path="user/:user/dash" element={<Dashboard />} />
-                        <Route path="project/:projectName/members" element={<Members />} />
+                        <Route path="user/:user/teams/:projectName" element={<Members />} />
                       </Route>
                       <Route path="sensors/:name" element={<Sensor />} />
 
