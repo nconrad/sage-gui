@@ -9,6 +9,7 @@ import USStates from './us-states'
 import { getCarrierName } from './carrier-codes'
 
 import Auth from '../auth/auth'
+import { AccessPerm, listMyProjects, Project } from './user'
 
 const PROJECT = settings.project
 
@@ -111,6 +112,9 @@ export type Node = {
   bottom_camera: string               // hw_model
   right_camera: string                // hw_model
   left_camera: string                 // hw_model
+
+  // user level access (for listUserNodesAndProjects)
+  access?: AccessPerm[]
 }
 
 
@@ -441,6 +445,31 @@ export async function getNodes(args?: GetNodeArgs) : Promise<Node[]> {
   return nodes
     .filter(o => !!o.computes.length)
     .map(obj => _sanitizeMeta(obj))
+}
+
+
+export async function getUserNodesAndProjects(args?: GetNodeArgs) : Promise<{
+  nodes: (Node & {access: AccessPerm[]})[],
+  projects: Project[]
+}> {
+  const {vsns, project} = args || {}
+
+  // get user's projects and nodes
+  const [myProjects, nodes] = await Promise.all([
+    listMyProjects(),
+    _getNodeMetas({project, vsns})
+  ])
+
+  // include "access" info for each node
+  const nodesWithAccess = nodes.map(n => ({
+    ...n,
+    access: myProjects.access[n.vsn] || []
+  }))
+
+  return {
+    nodes: nodesWithAccess.map(obj => _sanitizeMeta(obj)),
+    projects: myProjects.projects
+  }
 }
 
 

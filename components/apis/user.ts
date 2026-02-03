@@ -102,7 +102,7 @@ export function saveSSHKey(state: {ssh_public_keys: Profile['ssh_public_keys']})
 }
 
 
-export type AccessPerm = 'schedule' | 'develop'
+export type AccessPerm = 'schedule' | 'develop' | 'files'
 
 export type MyNode = {
   vsn: VSN
@@ -148,7 +148,9 @@ export type Project = {
 }
 
 
-export async function listMyProjects() : Promise<{projects: Project[], vsns: VSN[]}> {
+export async function listMyProjects() : Promise<{
+  projects: Project[], vsns: VSN[], access: {[vsn: string]: AccessPerm[]}
+}> {
   const data = await get(`${url}/users/${user}/projects`)
 
   return data

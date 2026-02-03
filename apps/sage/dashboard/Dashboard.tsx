@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
+
+import Masonry from '@mui/lab/Masonry'
 import {
-  DashboardRounded,
-  HubOutlined,
-  WorkOutline,
-  AppsRounded,
-  PlaylistAddCheckRounded,
-  TrendingUpRounded,
-  ArrowForwardRounded,
-  GroupOutlined
+  DashboardRounded, HubOutlined, WorkOutline, AppsRounded, PlaylistAddCheckRounded,
+  TrendingUpRounded, ArrowForwardRounded, GroupOutlined,
+  FilePresentOutlined,
+  TerminalOutlined,
+  ViewTimelineOutlined
 } from '@mui/icons-material'
 import { Button, ButtonGroup, Tooltip } from '@mui/material'
 
 import { useProgress } from '/components/progress/ProgressProvider'
 import { Card } from '/components/layout/Layout'
+import { CapabilityIconContainer, DisabledOverlay } from '/components/utils/CapabilityIcon'
 import Table from '/components/table/Table'
 import ErrorMsg from '/apps/sage/ErrorMsg'
 import RequireAuth from '/components/auth/RequireAuth'
@@ -36,18 +36,39 @@ const nodeColumns = [{
   label: 'Node',
   format: (vsn) => <Link to={`/node/${vsn}`}><b>{vsn}</b></Link>
 }, {
-  id: 'name',
-  label: 'Name'
+  id: 'city',
+  label: 'City',
 }, {
-  id: 'location',
-  label: 'Location',
-  format: (_, obj) => {
-    const parts = [obj.city, obj.state].filter(Boolean)
-    return parts.join(', ') || '-'
+  id: 'access',
+  label: 'Access',
+  format: (access: User.AccessPerm[] = []) => {
+    const hasFiles = access.includes('files')
+    const hasDevelop = access.includes('develop')
+    const hasSchedule = access.includes('schedule')
+
+    return (
+      <AccessIconsContainer>
+        <Tooltip title="File (image, audio, etc.) Access" placement="top" arrow>
+          <CapabilityIconContainer available={hasFiles}>
+            <FilePresentOutlined />
+            {!hasFiles && <DisabledOverlay />}
+          </CapabilityIconContainer>
+        </Tooltip>
+        <Tooltip title="Develop / ssh Remote Access" placement="top" arrow>
+          <CapabilityIconContainer available={hasDevelop}>
+            <TerminalOutlined />
+            {!hasDevelop && <DisabledOverlay />}
+          </CapabilityIconContainer>
+        </Tooltip>
+        <Tooltip title="Job Scheduling Access" placement="top" arrow>
+          <CapabilityIconContainer available={hasSchedule}>
+            <ViewTimelineOutlined />
+            {!hasSchedule && <DisabledOverlay />}
+          </CapabilityIconContainer>
+        </Tooltip>
+      </AccessIconsContainer>
+    )
   }
-}, {
-  id: 'project',
-  label: 'Project'
 }]
 
 
@@ -95,7 +116,7 @@ const jobColumns = [{
 const projectColumns = [{
   id: 'name',
   label: 'Project',
-  format: (name) => <b>{name}</b>
+  format: (name, obj) => <Link to={`/user/${Auth.user}/teams/${obj.name}`}><b>{name}</b></Link>
 }, {
   id: 'nodes',
   label: 'Nodes',
@@ -104,7 +125,7 @@ const projectColumns = [{
   id: 'members',
   label: 'Members',
   format: (members, obj) =>
-    <Link to={`/project/${obj.name}/members`}>
+    <Link to={`/user/${Auth.user}/teams/${obj.name}`}>
       {members.length}
     </Link>
 }]
@@ -127,40 +148,28 @@ export default function Dashboard() {
 
     setLoading(true)
 
-    // Fetch projects first to get user VSNs
-    const p2 = User.listMyProjects()
-      .then(({projects, vsns}) => {
-        console.log('User projects:', projects)
+    // Fetch user nodes and projects (includes access info)
+    const p1 = BK.getUserNodesAndProjects()
+      .then(({nodes, projects}) => {
+        setAllNodes(nodes)
         setProjects(projects)
-        return vsns
       })
       .catch(err => setError(err))
 
-    // Fetch all nodes and filter by user VSNs after projects are loaded
-    const p1 = p2.then(vsns => {
-      if (!vsns) return
-      return BK.getNodes()
-        .then(data => {
-          const userNodes = data.filter(node => vsns.includes(node.vsn))
-          setAllNodes(userNodes) // Store all nodes, filtering happens in render
-        })
-        .catch(err => setError(err))
-    })
-
     // Fetch apps
-    const p3 = ECR.listApps('mine')
+    const p2 = ECR.listApps('mine')
       .then(data => setApps(data.slice(0, 5))) // Show only 5 most recent
       .catch(err => setError(err))
 
     // Fetch jobs
-    const p4 = ES.getJobs()
+    const p3 = ES.getJobs()
       .then(data => {
         const userJobs = data.filter(job => job.user === Auth.user)
         setJobs(userJobs.slice(0, 5)) // Show only 5 most recent
       })
       .catch(err => setError(err))
 
-    Promise.all([p1, p2, p3, p4])
+    Promise.all([p1, p2, p3])
       .finally(() => setLoading(false))
 
   }, [setLoading])
@@ -191,7 +200,7 @@ export default function Dashboard() {
     elapsedTimes: {} // Will be populated by live data if available
   }))
 
-  // Table nodes (all filtered nodes)
+  // Table nodes (access already included from getUserNodesAndProjects)
   const tableNodes = filteredNodes
 
   // Define all achievements
@@ -417,7 +426,7 @@ export default function Dashboard() {
         )}
 
         {/* Content Sections */}
-        <ContentGrid>
+        <Masonry columns={{ xs: 1, sm: 1, md: 2, lg: 2 }} spacing={2}>
           {/* Map Section */}
           {allNodes && allNodes.length > 0 && (
             <Section>
@@ -428,7 +437,7 @@ export default function Dashboard() {
                   </SectionTitle>
                 </SectionHeader>
                 <MapContainer>
-                  <MapGL data={mapNodes} updateID={projectFilter} />
+                  <MapGL data={mapNodes} updateID={projectFilter}  markerClass="blue-dot" />
                 </MapContainer>
               </Card>
             </Section>
@@ -453,8 +462,6 @@ export default function Dashboard() {
                     primaryKey="vsn"
                     columns={nodeColumns}
                     rows={tableNodes}
-                    pagination={false}
-                    enableSorting={false}
                   />
                 </ScrollableTableContainer>
               ) : (
@@ -558,7 +565,7 @@ export default function Dashboard() {
               )}
             </Card>
           </Section>
-        </ContentGrid>
+        </Masonry>
       </Root>
     </RequireAuth>
   )
@@ -698,12 +705,6 @@ const StatLabel = styled('div')`
   font-size: 0.875em;
   color: ${({ theme }) => theme.palette.mode === 'dark' ? '#999' : '#666'};
   font-weight: 500;
-`
-
-const ContentGrid = styled('div')`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 2rem;
 `
 
 const Section = styled('div')`
@@ -907,4 +908,10 @@ const BadgeProgress = styled('div')`
   font-size: 0.8em;
   font-weight: 700;
   color: ${({ theme }) => theme.palette.primary.main};
+`
+
+const AccessIconsContainer = styled('div')`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 `
