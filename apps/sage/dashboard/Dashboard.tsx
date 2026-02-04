@@ -139,9 +139,22 @@ export default function Dashboard() {
   const [apps, setApps] = useState<ECR.AppDetails[]>()
   const [jobs, setJobs] = useState<ES.Job[]>()
   const [projectFilter, setProjectFilter] = useState<'all' | 'SAGE' | 'SGT'>('all')
+  const [accessFilters, setAccessFilters] = useState<Set<User.AccessPerm>>(new Set())
   const [showAllAchievements, setShowAllAchievements] = useState(false)
 
   const [error, setError] = useState(null)
+
+  const toggleAccessFilter = (access: User.AccessPerm) => {
+    setAccessFilters(prev => {
+      const newFilters = new Set(prev)
+      if (newFilters.has(access)) {
+        newFilters.delete(access)
+      } else {
+        newFilters.add(access)
+      }
+      return newFilters
+    })
+  }
 
   useEffect(() => {
     if (!Auth.isSignedIn) return
@@ -186,10 +199,22 @@ export default function Dashboard() {
   }).length || 0
   const totalJobs = jobs?.length || 0
 
-  // Filter nodes based on project filter
+  // Filter nodes based on project and access filters
   const filteredNodes = allNodes?.filter(node => {
-    if (projectFilter === 'all') return true
-    return node.project?.includes(projectFilter)
+    // Project filter
+    if (projectFilter !== 'all' && !node.project?.includes(projectFilter)) {
+      return false
+    }
+
+    // Access filter - if any access filters are set, node must have ALL selected access types
+    if (accessFilters.size > 0) {
+      const nodeAccess = node.access || []
+      return Array.from(accessFilters).every(requiredAccess =>
+        nodeAccess.includes(requiredAccess)
+      )
+    }
+
+    return true
   }) || []
 
   // Map nodes with required properties
@@ -398,30 +423,59 @@ export default function Dashboard() {
           </AchievementsCard>
         </TopSection>
 
-        {/* Project Filter */}
+        {/* Filters Section */}
         {allNodes && allNodes.length > 0 && (
-          <GlobalFilterSection>
-            <FilterLabel>Filter by Project:</FilterLabel>
-            <ButtonGroup size="medium" variant="outlined">
-              <Button
-                onClick={() => setProjectFilter('all')}
-                variant={projectFilter === 'all' ? 'contained' : 'outlined'}
-              >
-                All ({allNodes.length})
-              </Button>
-              <Button
-                onClick={() => setProjectFilter('SAGE')}
-                variant={projectFilter === 'SAGE' ? 'contained' : 'outlined'}
-              >
-                Sage ({allNodes.filter(n => n.project?.includes('SAGE')).length})
-              </Button>
-              <Button
-                onClick={() => setProjectFilter('SGT')}
-                variant={projectFilter === 'SGT' ? 'contained' : 'outlined'}
-              >
-                SGT ({allNodes.filter(n => n.project?.includes('SGT')).length})
-              </Button>
-            </ButtonGroup>
+          <GlobalFilterSection className="flex justify-between">
+            <FilterGroup className="flex column items-start flex-wrap">
+              <FilterLabel>Project</FilterLabel>
+              <ButtonGroup size="medium" variant="outlined">
+                <Button
+                  onClick={() => setProjectFilter('all')}
+                  variant={projectFilter === 'all' ? 'contained' : 'outlined'}
+                >
+                  All ({allNodes.length})
+                </Button>
+                <Button
+                  onClick={() => setProjectFilter('SAGE')}
+                  variant={projectFilter === 'SAGE' ? 'contained' : 'outlined'}
+                >
+                  Sage ({allNodes.filter(n => n.project?.includes('SAGE')).length})
+                </Button>
+                <Button
+                  onClick={() => setProjectFilter('SGT')}
+                  variant={projectFilter === 'SGT' ? 'contained' : 'outlined'}
+                >
+                  SGT ({allNodes.filter(n => n.project?.includes('SGT')).length})
+                </Button>
+              </ButtonGroup>
+            </FilterGroup>
+
+            <FilterGroup className="flex column items-start flex-wrap">
+              <FilterLabel>Access</FilterLabel>
+              <ButtonGroup size="medium" variant="outlined">
+                <Button
+                  onClick={() => toggleAccessFilter('files')}
+                  variant={accessFilters.has('files') ? 'contained' : 'outlined'}
+                  startIcon={<FilePresentOutlined />}
+                >
+                  Files
+                </Button>
+                <Button
+                  onClick={() => toggleAccessFilter('develop')}
+                  variant={accessFilters.has('develop') ? 'contained' : 'outlined'}
+                  startIcon={<TerminalOutlined />}
+                >
+                  Develop
+                </Button>
+                <Button
+                  onClick={() => toggleAccessFilter('schedule')}
+                  variant={accessFilters.has('schedule') ? 'contained' : 'outlined'}
+                  startIcon={<ViewTimelineOutlined />}
+                >
+                  Schedule
+                </Button>
+              </ButtonGroup>
+            </FilterGroup>
           </GlobalFilterSection>
         )}
 
@@ -437,7 +491,11 @@ export default function Dashboard() {
                   </SectionTitle>
                 </SectionHeader>
                 <MapContainer>
-                  <MapGL data={mapNodes} updateID={projectFilter}  markerClass="blue-dot" />
+                  <MapGL
+                    data={mapNodes}
+                    updateID={`${projectFilter}-${Array.from(accessFilters).sort().join(',')}`}
+                    markerClass="blue-dot"
+                  />
                 </MapContainer>
               </Card>
             </Section>
@@ -632,9 +690,6 @@ const StatsGrid = styled('div')`
 `
 
 const GlobalFilterSection = styled('div')`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   padding: 1.5rem;
   background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa'};
   border: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#444' : '#e0e0e0'};
@@ -643,10 +698,13 @@ const GlobalFilterSection = styled('div')`
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 `
 
+const FilterGroup = styled('div')`
+
+`
+
 const FilterLabel = styled('span')`
   font-weight: 600;
   color: ${({ theme }) => theme.palette.mode === 'dark' ? '#fff' : '#333'};
-  font-size: 1em;
 `
 
 const MapContainer = styled('div')`

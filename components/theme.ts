@@ -93,7 +93,8 @@ const theme = createTheme({
     },
     MuiButton: {
       defaultProps: {
-        size: 'small'
+        size: 'small',
+        disableRipple: true
       },
     },
     MuiIconButton: {
@@ -101,9 +102,24 @@ const theme = createTheme({
         disableRipple: true
       }
     },
+    MuiButtonGroup: {
+      defaultProps: {
+        disableRipple: true
+      }
+    },
     MuiToggleButtonGroup: {
       defaultProps: {
         size: 'small'
+      }
+    },
+    MuiToggleButton: {
+      defaultProps: {
+        disableRipple: true
+      }
+    },
+    MuiFab: {
+      defaultProps: {
+        disableRipple: true
       }
     },
     MuiSelect: {
