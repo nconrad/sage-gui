@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
@@ -145,7 +145,11 @@ const capabilityLabels = {
   PM: 'Particulate Matter'
 }
 
-export function SensorIcons({data}) {
+type SensorIconsProps = {
+  data: BK.Node['sensors'] | BK.Node['computes']
+}
+
+export const SensorIcons = memo(function SensorIcons({data}: SensorIconsProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [popoverSensors, setPopoverSensors] = useState<{hw_model: string, name: string, isThermal: boolean}[]>([])
   const [popoverCapability, setPopoverCapability] = useState<string>('')
@@ -351,6 +355,7 @@ export function SensorIcons({data}) {
           anchorEl={anchorEl}
           placement="bottom-end"
           disablePortal={false}
+          sx={{zIndex: 1300}}
         >
           <List dense sx={{ minWidth: 200, py: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
             <ListItem sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
@@ -400,7 +405,7 @@ export function SensorIcons({data}) {
       </ClickAwayListener>
     </>
   )
-}
+})
 
 
 export function status(val, obj) {

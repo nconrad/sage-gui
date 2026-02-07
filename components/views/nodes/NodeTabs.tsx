@@ -4,7 +4,8 @@ import { Outlet, useLocation } from 'react-router-dom'
 import {
   AccountCircleOutlined, GroupOutlined,
   WorkOutline, SelectAll, SensorsRounded,
-  FiberNewOutlined, DashboardOutlined
+  FiberNewOutlined, DashboardOutlined,
+  CheckCircleOutline, ListAlt
 } from '@mui/icons-material'
 
 import HardDriveIcon from '/assets/hard-drive.svg'
@@ -32,15 +33,15 @@ const userBadgeSx = {
 const getNavItems = (includeSensors, search) => {
   let items: NavItem[] = [
     {
-      to: `nodes`,
+      to: `nodes/all`,
       icon: <SelectAll />,
       label: 'All Nodes',
       tooltip: 'All Nodes',
       expandable: true,
-      expanded: true
+      expanded: false
     },
     {
-      to: `nodes/sgt`,
+      to: `nodes/all/sgt`,
       icon:
         <Badge
           badgeContent={<FiberNewOutlined style={{fontSize: '1.5em'}} />}
@@ -54,11 +55,61 @@ const getNavItems = (includeSensors, search) => {
       tooltip: 'Sage Grande Testbed Nodes',
       minimizedLabel: 'SGT',
       indent: true,
+      parentId: 'nodes/all'
+    },
+    {
+      to: `nodes/all/sage`,
+      icon: <HardDriveIcon />,
+      label: <>Sage</>,
+      tooltip: 'Sage Nodes',
+      indent: true,
+      parentId: 'nodes/all'
+    },
+    // ------------------------------
+    {
+      to: `nodes`,
+      icon:
+        <Badge
+          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
+          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
+          overlap="circular"
+          sx={userBadgeSx}
+        >
+          <ListAlt />
+        </Badge>,
+      label: 'Status',
+      tooltip: 'Node Status',
+      expandable: true,
+      expanded: true
+    },
+    {
+      to: `nodes/sgt`,
+      icon:
+        <Badge
+          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
+          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
+          overlap="circular"
+          sx={userBadgeSx}
+        >
+          <HardDriveIcon />
+        </Badge>,
+      label: <>SGT</>,
+      tooltip: 'Sage Grande Testbed Nodes',
+      minimizedLabel: 'SGT',
+      indent: true,
       parentId: 'nodes'
     },
     {
       to: `nodes/sage`,
-      icon: <HardDriveIcon />,
+      icon:
+        <Badge
+          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
+          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
+          overlap="circular"
+          sx={userBadgeSx}
+        >
+          <HardDriveIcon />
+        </Badge>,
       label: <>Sage</>,
       tooltip: 'Sage Nodes',
       indent: true,
@@ -76,58 +127,62 @@ const getNavItems = (includeSensors, search) => {
     ]
   }
 
+
+  items = [...items,
+    'divider',
+    {
+      to: `user/${Auth.user}/dash`,
+      icon: <DashboardOutlined />,
+      label: 'Dash',
+      tooltip: 'My Dashboard'
+    },
+    {
+      to: `user/${Auth.user}/nodes`,
+      icon: <AccountCircleOutlined />,
+      label: 'My Nodes',
+      expandable: true,
+      expanded: false
+    },
+    {
+      to: `user/${Auth.user}/nodes/sgt`,
+      icon: (
+        <Badge
+          badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
+          anchorOrigin={{vertical: 'top', horizontal: 'right'}}
+          overlap="circular"
+          sx={userBadgeSx}
+        >
+          <HardDriveIcon />
+        </Badge>
+      ),
+      label: <>SGT</>,
+      tooltip: 'My SGT Nodes',
+      minimizedLabel: 'My SGT Nodes',
+      indent: true,
+      parentId: 'user/nodes'
+    },
+    {
+      to: `user/${Auth.user}/nodes/sage`,
+      icon: (
+        <Badge
+          badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
+          anchorOrigin={{vertical: 'top', horizontal: 'right'}}
+          overlap="circular"
+          sx={userBadgeSx}
+        >
+          <HardDriveIcon />
+        </Badge>
+      ),
+      label: <>Sage</>,
+      tooltip: 'My Sage Nodes',
+      minimizedLabel: 'My Sage Nodes',
+      indent: true,
+      parentId: 'user/nodes'
+    },
+  ]
+
   if (Auth.isSignedIn) {
     items = [...items,
-      'divider',
-      {
-        to: `user/${Auth.user}/dash`,
-        icon: <DashboardOutlined />,
-        label: 'Dash',
-        tooltip: 'My Dashboard'
-      },
-      {
-        to: `user/${Auth.user}/nodes`,
-        icon: <AccountCircleOutlined />,
-        label: 'My Nodes',
-        expandable: true,
-        expanded: false
-      },
-      {
-        to: `user/${Auth.user}/nodes/sgt`,
-        icon: (
-          <Badge
-            badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
-            anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-            overlap="circular"
-            sx={userBadgeSx}
-          >
-            <HardDriveIcon />
-          </Badge>
-        ),
-        label: <>SGT</>,
-        tooltip: 'My SGT Nodes',
-        minimizedLabel: 'My SGT Nodes',
-        indent: true,
-        parentId: 'user/nodes'
-      },
-      {
-        to: `user/${Auth.user}/nodes/sage`,
-        icon: (
-          <Badge
-            badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
-            anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-            overlap="circular"
-            sx={userBadgeSx}
-          >
-            <HardDriveIcon />
-          </Badge>
-        ),
-        label: <>Sage</>,
-        tooltip: 'My Sage Nodes',
-        minimizedLabel: 'My Sage Nodes',
-        indent: true,
-        parentId: 'user/nodes'
-      },
       {
         to: `user/${Auth.user}/projects`,
         icon: <WorkOutline />,

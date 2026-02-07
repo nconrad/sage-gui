@@ -16,7 +16,8 @@ const columns: Column<Node>[] = [{
 }, {
   id: 'vsn',
   label: 'Node',
-  format: formatters.vsnLinkWithEdit // vsnLinkWithEdit is used if permissions are found
+  format: formatters.vsnLinkWithEdit, // vsnLinkWithEdit is used if permissions are found,
+  width: '138px'
 }, {
   id: 'type',
   label: 'Type',

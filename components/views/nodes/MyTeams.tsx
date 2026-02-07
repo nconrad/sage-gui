@@ -29,7 +29,7 @@ const columns = [{
   format: (username) => <code>{username}</code>
 }, {
   id: 'projectNames',
-  label: 'Projects(s)',
+  label: 'My Projects(s)',
   format: (projectNames: string[]) => (
     <>
       {projectNames.map((projectName, i) => (
