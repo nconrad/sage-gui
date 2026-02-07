@@ -219,15 +219,18 @@ export default function Sage() {
                     <Route path='/' element={<MetaRoute />}>
 
                       <Route path="/" element={<NodeTabs />}>
+                        <Route path="nodes/all" element={<Nodes />} />
+                        <Route path="nodes/all/:sageProject?" element={<Nodes />} />
                         <Route path="nodes/:sageProject?" element={<Nodes />} />
-                        <Route path="all-nodes" element={<Nodes />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
-                        <Route path="user/:user/dash" element={<Dashboard />} />
-                        <Route path="user/:user/nodes/:sageProject?" element={<Nodes />} />
-                        <Route path="user/:user/projects" element={<MyProjects />} />
-                        <Route path="user/:user/teams" element={<MyTeams />} />
-                        <Route path="user/:user/teams/:projectName" element={<Members />} />
+
+                        <Route path="user/:user/dash" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                        <Route path="user/:user/nodes/:sageProject?" element={<RequireAuth><Nodes /></RequireAuth>} />
+                        <Route path="user/:user/projects" element={<RequireAuth><MyProjects /></RequireAuth>} />
+                        <Route path="user/:user/teams" element={<RequireAuth><MyTeams /></RequireAuth>} />
+                        <Route path="user/:user/teams/:projectName" element={<RequireAuth><Members /></RequireAuth>} />
                       </Route>
+
                       <Route path="sensors/:name" element={<Sensor />} />
 
                       <Route path="node/:vsn" element={<Node />} />
