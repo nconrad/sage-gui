@@ -147,9 +147,10 @@ const capabilityLabels = {
 
 type SensorIconsProps = {
   data: BK.Node['sensors'] | BK.Node['computes']
+  showOnlyPresent?: boolean
 }
 
-export const SensorIcons = memo(function SensorIcons({data}: SensorIconsProps) {
+export const SensorIcons = memo(function SensorIcons({data, showOnlyPresent = false}: SensorIconsProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [popoverSensors, setPopoverSensors] = useState<{hw_model: string, name: string, isThermal: boolean}[]>([])
   const [popoverCapability, setPopoverCapability] = useState<string>('')
@@ -224,6 +225,11 @@ export const SensorIcons = memo(function SensorIcons({data}: SensorIconsProps) {
 
           // Don't show Additional Sensors/Capabilities icon if there aren't any
           if (capability === 'Additional Sensors/Capabilities' && !isPresent) {
+            return null
+          }
+
+          // Skip non-present capabilities if showOnlyPresent is true
+          if (showOnlyPresent && !isPresent) {
             return null
           }
 

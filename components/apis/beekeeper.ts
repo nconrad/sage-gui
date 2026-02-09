@@ -455,10 +455,15 @@ export async function getUserNodesAndProjects(args?: GetNodeArgs) : Promise<{
   const {vsns, project} = args || {}
 
   // get user's projects and nodes
-  const [myProjects, nodes] = await Promise.all([
+  const prom = await Promise.all([
     listMyProjects(),
     _getNodeMetas({project, vsns})
   ])
+
+  const myProjects = prom[0]
+  let nodes = prom[1]
+
+  nodes = nodes.filter(o => myProjects.vsns.includes(o.vsn))
 
   // include "access" info for each node
   const nodesWithAccess = nodes.map(n => ({
