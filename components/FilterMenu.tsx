@@ -102,7 +102,7 @@ const StyledInput = styled(InputBase)(({ theme }) => ({
 
 type Option = {
   id: string
-  label?: string
+  label?: string | React.ReactNode
   hide?: boolean
   type?: string
   subText?: string

@@ -5,19 +5,15 @@ import { Link } from 'react-router-dom'
 import { IconButton, Badge, Tooltip, Popper, ClickAwayListener, List, ListItem, ListItemText } from '@mui/material'
 
 import {
-  BugReportOutlined, CheckRounded, CheckCircleRounded, ReportProblemOutlined,
+  CheckRounded, CheckCircleRounded, ReportProblemOutlined,
   PendingOutlined, ErrorOutlineRounded, RoomOutlined, Edit, LaunchRounded,
-  Thermostat, Compress, GasMeterOutlined, Grain, Mic, RouterOutlined, Air,
-  CameraAltOutlined, OpacityOutlined, Whatshot, ScienceOutlined, MoreOutlined
+  CameraAltOutlined, Whatshot
 } from '@mui/icons-material'
-
-import WbCloudyIcon from '/assets/weathermix.svg'
-import Humidity from '/assets/humidity.svg'
-import Level from '/assets/level.svg'
 
 import { NODE_STATUS_RANGE } from '/components/apis/beehive'
 import NodeLastReported from '/components/utils/NodeLastReported'
 import Dot from '/components/utils/Dot'
+import { capabilityIcons } from '../sensor/capabilityIcons'
 
 import * as utils from '/components/utils/units'
 import * as BK from '/components/apis/beekeeper'
@@ -118,33 +114,6 @@ const ThermalCameraIcon = () => (
 )
 
 
-// Mapping of capability keywords to icons
-const capabilityIcons = {
-  Camera: CameraAltOutlined,
-  Microphone: Mic,
-  GPS: RoomOutlined,
-  Precipitation: WbCloudyIcon,
-  Temperature: Thermostat,
-  Pressure: Compress,
-  Humidity: () => <Humidity />,
-  Gas: GasMeterOutlined,
-  'Particulate Matter': Grain,
-  Wind: Air,
-  Moisture: OpacityOutlined,
-  Biological: BugReportOutlined,
-  Chemical: ScienceOutlined,
-  Accelerometer: Level,
-  lorawan: RouterOutlined,
-  'Additional Sensors/Capabilities': MoreOutlined // generic icon for uncategorized sensors
-}
-
-const capabilityLabels = {
-  Pa: 'Pressure',
-  RH: 'Humidity',
-  Precip: 'Precipitation',
-  PM: 'Particulate Matter'
-}
-
 type SensorIconsProps = {
   data: BK.Node['sensors'] | BK.Node['computes']
   showOnlyPresent?: boolean
@@ -221,7 +190,6 @@ export const SensorIcons = memo(function SensorIcons({data, showOnlyPresent = fa
           const sensors = capabilityCounts.get(capability)
           const count = sensors ? sensors.length : 0
           const isPresent = count > 0
-          const label = capabilityLabels[capability] || capability
 
           // Don't show Additional Sensors/Capabilities icon if there aren't any
           if (capability === 'Additional Sensors/Capabilities' && !isPresent) {
@@ -268,7 +236,7 @@ export const SensorIcons = memo(function SensorIcons({data, showOnlyPresent = fa
                       borderBottom: '1px solid rgba(255, 255, 255, 0.3)'
                     }}>
                       <span style={{fontSize: '1.1em'}}>
-                        <strong>{label}</strong> {count > 1 && `(${count} total)`}
+                        <strong>{capability}</strong> {count > 1 && `(${count} total)`}
                       </span>
                       {cameraBreakdown && (
                         <strong style={{
@@ -301,7 +269,7 @@ export const SensorIcons = memo(function SensorIcons({data, showOnlyPresent = fa
                     <small style={{marginTop: '8px', display: 'block', opacity: 0.7}}><i>Click for details</i></small>
                   </>
                 ) : (
-                  <><strong>{label}</strong><br/><small>(not present)</small></>
+                  <><strong>{capability}</strong><br/><small>(not present)</small></>
                 )
               }
               placement="top"
@@ -366,7 +334,7 @@ export const SensorIcons = memo(function SensorIcons({data, showOnlyPresent = fa
           <List dense sx={{ minWidth: 200, py: 1, bgcolor: 'background.paper', boxShadow: 1 }}>
             <ListItem sx={{ pb: 1, borderBottom: 1, borderColor: 'divider' }}>
               <ListItemText
-                primary={capabilityLabels[popoverCapability] || popoverCapability}
+                primary={popoverCapability}
                 primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9em' }}
               />
             </ListItem>

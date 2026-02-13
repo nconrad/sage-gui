@@ -6,22 +6,17 @@ import Masonry from '@mui/lab/Masonry'
 import {
   DashboardRounded, HubOutlined, WorkOutline, AppsRounded, PlaylistAddCheckRounded,
   TrendingUpRounded, ArrowForwardRounded, GroupOutlined, FilePresentOutlined,
-  TerminalOutlined, ViewTimelineOutlined, SensorsOutlined,
-  CameraAltOutlined, Mic, RoomOutlined, Thermostat, Compress, GasMeterOutlined,
-  Grain, Air, OpacityOutlined, BugReportOutlined, ScienceOutlined, RouterOutlined, MoreOutlined
+  TerminalOutlined, ViewTimelineOutlined, SensorsOutlined
 } from '@mui/icons-material'
 import { Button, ButtonGroup, Tooltip } from '@mui/material'
 
-import WbCloudyIcon from '/assets/weathermix.svg'
-import Humidity from '/assets/humidity.svg'
-import Level from '/assets/level.svg'
-
 import { SensorIcons } from '/components/views/nodes/nodeFormatters'
+import { capabilityIcons } from '/components/views/sensor/capabilityIcons'
 import { subDays } from 'date-fns'
 
 import { useProgress } from '/components/progress/ProgressProvider'
 import { Card } from '/components/layout/Layout'
-import { CapabilityIconContainer, DisabledOverlay } from '/components/utils/CapabilityIcon'
+import { CapabilityIconContainer, DisabledOverlay } from '/components/views/sensor/CapabilityIcon'
 import Table from '/components/table/Table'
 import { queryData } from '/components/data/queryData'
 import ErrorMsg from '/apps/sage/ErrorMsg'
@@ -861,32 +856,6 @@ export default function Dashboard() {
                       })
                     })
 
-                    const capabilityIcons = {
-                      Camera: CameraAltOutlined,
-                      Microphone: Mic,
-                      GPS: RoomOutlined,
-                      Precipitation: WbCloudyIcon,
-                      Temperature: Thermostat,
-                      Pressure: Compress,
-                      Humidity: () => <Humidity />,
-                      Gas: GasMeterOutlined,
-                      'Particulate Matter': Grain,
-                      Wind: Air,
-                      Moisture: OpacityOutlined,
-                      Biological: BugReportOutlined,
-                      Chemical: ScienceOutlined,
-                      Accelerometer: Level,
-                      lorawan: RouterOutlined,
-                      'Additional Sensors/Capabilities': MoreOutlined
-                    }
-
-                    const capabilityLabels = {
-                      Pressure: 'Pressure',
-                      Humidity: 'Humidity',
-                      Precipitation: 'Precipitation',
-                      'Particulate Matter': 'Particulate Matter'
-                    }
-
                     let userSensors = [...baseSensors]
 
                     // Apply capability filters
@@ -922,10 +891,9 @@ export default function Dashboard() {
                                     .map(capability => {
                                       const Icon = capabilityIcons[capability]
                                       const isSelected = sensorCapabilityFilters.has(capability)
-                                      const label = capabilityLabels[capability] || capability
 
                                       return (
-                                        <Tooltip key={capability} title={label} placement="top">
+                                        <Tooltip key={capability} title={capability} placement="top">
                                           <CapabilityIconButton
                                             selected={isSelected}
                                             onClick={() => toggleSensorCapabilityFilter(capability)}

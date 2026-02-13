@@ -16,6 +16,7 @@ import FilterMenu from '/components/FilterMenu'
 import { filterData, FilterState } from '../statusDataUtils'
 import { parseQueryStr } from '/components/utils/queryString'
 import QueryViewer from '/components/QueryViewer'
+import { getCapabilityIcon } from './capabilityIcons'
 
 
 const getTitle = (hardware: string, description: string) => {
@@ -67,7 +68,7 @@ export const columns = [{
   id: 'description',
   label: 'Description',
   format: (description, obj) => {
-    const {hardware, hw_model} = obj
+    const {hardware} = obj
 
     return (
       <div>
@@ -76,10 +77,10 @@ export const columns = [{
             {getTitle(hardware, description)}
           </div>
         </h3>
-        {getDescriptionHTML(description, hw_model)}
+        {getDescriptionHTML(description)}
         <Tags>
           {obj.capabilities.map(v => (
-            <Chip key={v} label={v} />
+            <Chip key={v} label={v} icon={getCapabilityIcon(v)} />
           ))}
         </Tags>
       </div>
@@ -124,7 +125,10 @@ type Option = {
 
 const getCapabilities = (data: BK.SensorHardware[]) : Option[] =>
   [...new Set(data.flatMap(obj => obj.capabilities)) ]
-    .map(name => ({id: name, label: name}))
+    .map(name => ({
+      id: name,
+      label: <div className="flex items-center">{getCapabilityIcon(name)} {name}</div>
+    }))
 
 
 const initialState: FilterState = {

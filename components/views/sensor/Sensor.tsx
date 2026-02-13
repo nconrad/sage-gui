@@ -13,6 +13,7 @@ import { Sidebar, Card, CardViewStyle } from '/components/layout/Layout'
 import SimpleForm, { type Field } from '/components/input/SimpleForm'
 import Breadcrumbs from '/apps/sage/data-commons/BreadCrumbs'
 import { columns } from './SensorList'
+import { getCapabilityIcon } from './capabilityIcons'
 
 import * as BK from '/components/apis/beekeeper'
 import { marked } from 'marked'
@@ -138,7 +139,7 @@ export default function Sensor() {
                   <h4>Capabilities</h4>
                   <Capabilities>
                     {capabilities.map(capability =>
-                      <Chip key={capability} label={capability} />
+                      <Chip key={capability} label={capability} icon={getCapabilityIcon(capability)} />
                     )}
                   </Capabilities>
                 </li>
