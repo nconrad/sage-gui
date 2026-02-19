@@ -23,7 +23,7 @@ const prod = {
   dataDownload: 'https://sage-commons.sdsc.edu/sageinterface/dump',
   docs: 'https://sagecontinuum.org/docs',
   contactUs: 'https://sagecontinuum.org/docs/contact-us',
-  officeHours: 'https://sagecontinuum.org/docs/office-hours',
+  officeHours: 'https://sagecontinuum.org/docs/events/office-hours',
   labs: 'https://sagecontinuum.org/labs'
 }
 

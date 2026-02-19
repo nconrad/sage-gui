@@ -17,7 +17,7 @@ const { contactUs } = config
 const columns = [{
   id: 'vsn',
   label: <>Node (VSN)</>,
-  format: (vsn, obj) => <Link to={`/node/${obj.vsn}`}>{vsn}</Link>
+  format: (vsn, obj) => <Link to={`/nodes/${obj.vsn}`}>{vsn}</Link>
 }, {
   id: 'schedule',
   label: 'Can schedule?',

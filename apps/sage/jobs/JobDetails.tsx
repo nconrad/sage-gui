@@ -298,7 +298,7 @@ export default function JobDetails(props: Props) {
                     <div className="title-row">
                       <div className="flex column">
                         <div>
-                          <h2><Link to={`/node/${vsn}`}>{vsn}</Link></h2>
+                          <h2><Link to={`/nodes/${vsn}`}>{vsn}</Link></h2>
                         </div>
                         <div>{address}</div>
                       </div>

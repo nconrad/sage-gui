@@ -215,7 +215,7 @@ export default function Sage() {
                       </Route>
                       <Route path="sensors/:name" element={<Sensor />} />
 
-                      <Route path="node/:vsn" element={<Node />} />
+                      <Route path="nodes/:vsn" element={<Node />} />
 
                       <Route path="/apps" element={<Navigate to="/apps/explore" replace />} />
                       <Route path="apps" element={<Apps />}>

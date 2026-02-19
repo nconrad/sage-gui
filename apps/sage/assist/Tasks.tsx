@@ -200,7 +200,7 @@ export default function Tasks(props: Props) {
 
                   <div className="flex items-center">
 
-                    <a href={`/node/${node}`} target="_blank" rel="noreferrer">
+                    <a href={`/nodes/${node}`} target="_blank" rel="noreferrer">
                       {node}
                     </a>
                     <IconButton

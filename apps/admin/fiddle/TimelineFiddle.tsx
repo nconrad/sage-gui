@@ -59,7 +59,7 @@ export default function Timeline() {
       }
 
 
-      {data2 && <h2>Node <Link to={`/node/${vsn}`}>{vsn}</Link></h2>}
+      {data2 && <h2>Node <Link to={`/nodes/${vsn}`}>{vsn}</Link></h2>}
       {data2 &&
         <TimelineChart
           data={data2}

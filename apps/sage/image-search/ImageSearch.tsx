@@ -45,7 +45,7 @@ function getColumns(data) {
     }
     if (label == 'vsn') {
       obj.format = (val) =>
-        <a href={`/node/${val}`} target="_blank" rel="noopener noreferrer">
+        <a href={`/nodes/${val}`} target="_blank" rel="noopener noreferrer">
           {val}
         </a>
 

@@ -67,7 +67,7 @@ function RecentImgs(props: RecentImgsProps) {
         const {vsn} = node
         return (
           <Card key={vsn} className="card">
-            <h3><Link to={`/node/${vsn}`}>{vsn}</Link></h3>
+            <h3><Link to={`/nodes/${vsn}`}>{vsn}</Link></h3>
             <Imgs>
               <RecentImages
                 vsn={vsn}

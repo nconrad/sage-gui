@@ -114,7 +114,7 @@ export default function App() {
                         <Route path="nodes" element={<Status />} />
                         <Route path="tests" element={<Tests />} />
                       </Route>
-                      <Route path="/node/:vsn" element={<Node admin />} />
+                      <Route path="/nodes/:vsn" element={<Node admin />} />
 
                       <Route path="data/ontology/:name" element={<Ontology />} />
                       <Route path="query-browser" element={<QueryBrowser />} />

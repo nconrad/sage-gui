@@ -37,7 +37,7 @@ const columns = [
   {
     id: 'vsn',
     label: 'VSN',
-    format: (val) => <Link to={`/node/${val}?factory=true`}>{val}</Link>
+    format: (val) => <Link to={`/nodes/${val}?factory=true`}>{val}</Link>
   },
   getColumn('temp'),
   {
@@ -56,7 +56,7 @@ const columns = [
       const lastN = isPhase2 ? 3*24 : 7*24
       const data = details?.slice(-lastN)
 
-      return <Link to={`/node/${row.vsn}?tab=health`} className="no-style flex justify-end">
+      return <Link to={`/nodes/${row.vsn}?tab=health`} className="no-style flex justify-end">
         {!data?.length ? <div>no data</div> :
           <HealthSparkler
             name={<>summary of last (available) {data?.length} hours</>}
@@ -81,7 +81,7 @@ const columns = [
       const lastN = isPhase2 ? 3*24 : 7*24
       const data = details?.slice(-lastN)
 
-      return <Link to={`/node/${row.vsn}?tab=health`} className="no-style flex justify-end">
+      return <Link to={`/nodes/${row.vsn}?tab=health`} className="no-style flex justify-end">
         {!data?.length ? <div>no data</div> :
           <HealthSparkler
             name={<>summary of last (available) {data?.length} hours</>}
