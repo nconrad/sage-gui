@@ -219,13 +219,18 @@ export default function Sage() {
                     <Route path='/' element={<MetaRoute />}>
 
                       <Route path="/" element={<NodeTabs />}>
+                        <Route path="nodes" element={<Nodes />} />
                         <Route path="nodes/all" element={<Nodes />} />
                         <Route path="nodes/all/:sageProject?" element={<Nodes />} />
-                        <Route path="nodes/:sageProject?" element={<Nodes />} />
+                        <Route path="nodes/project/:sageProject?" element={<Nodes />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
 
                         <Route path="user/:user/dash" element={<RequireAuth><Dashboard /></RequireAuth>} />
-                        <Route path="user/:user/nodes/:sageProject?" element={<RequireAuth><Nodes /></RequireAuth>} />
+                        <Route path="user/:user/nodes" element={<RequireAuth><Nodes /></RequireAuth>} />
+                        <Route
+                          path="user/:user/nodes/project/:sageProject?"
+                          element={<RequireAuth><Nodes /></RequireAuth>}
+                        />
                         <Route path="user/:user/projects" element={<RequireAuth><MyProjects /></RequireAuth>} />
                         <Route path="user/:user/teams" element={<RequireAuth><MyTeams /></RequireAuth>} />
                         <Route path="user/:user/teams/:projectName" element={<RequireAuth><Members /></RequireAuth>} />

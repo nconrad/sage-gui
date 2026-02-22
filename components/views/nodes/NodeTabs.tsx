@@ -83,7 +83,7 @@ const getNavItems = (includeSensors, search) => {
       expanded: true
     },
     {
-      to: `nodes/sgt`,
+      to: `nodes/project/sgt`,
       icon:
         <Badge
           badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
@@ -100,7 +100,7 @@ const getNavItems = (includeSensors, search) => {
       parentId: 'nodes'
     },
     {
-      to: `nodes/sage`,
+      to: `nodes/project/sage`,
       icon:
         <Badge
           badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
@@ -137,14 +137,14 @@ const getNavItems = (includeSensors, search) => {
       tooltip: 'My Dashboard'
     },
     {
-      to: `user/${Auth.user}/nodes`,
+      to: `user/${Auth.user}/nodes?show_all=true`,
       icon: <AccountCircleOutlined />,
       label: 'My Nodes',
       expandable: true,
       expanded: false
     },
     {
-      to: `user/${Auth.user}/nodes/sgt`,
+      to: `user/${Auth.user}/nodes/project/sgt?show_all=true`,
       icon: (
         <Badge
           badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
@@ -162,7 +162,7 @@ const getNavItems = (includeSensors, search) => {
       parentId: 'user/nodes'
     },
     {
-      to: `user/${Auth.user}/nodes/sage`,
+      to: `user/${Auth.user}/nodes/project/sage?show_all=true`,
       icon: (
         <Badge
           badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}

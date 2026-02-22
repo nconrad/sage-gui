@@ -332,6 +332,11 @@ export default function Nodes() {
   }, [selected])
 
 
+  useEffect(() => {
+    setUpdateID(prev => prev + 1)
+  }, [show_all])
+
+
   // Event handlers
   const handleQuery = ({query}) => {
     const newParams = new URLSearchParams(params)
@@ -389,9 +394,8 @@ export default function Nodes() {
   return (
     <Root>
       <Overview className="flex">
-        {filtered &&
-          <MapContainer>
-            {!selected?.length &&
+        <MapContainer>
+          {filtered && !selected?.length &&
               <Title>
                 {isMyNodes ? `My ${filtered.length} Node` : `${filtered.length} Node`}{filtered.length == 1 ? '' : 's'}
                 {' '}|{' '}
@@ -399,14 +403,14 @@ export default function Nodes() {
                   {lastUpdate?.toLocaleTimeString('en-US')}
                 </small>
               </Title>
-            }
-            <MapGL
-              data={selected.length ? getSelectedSubset(selected, filtered) : filtered}
-              markerClass={all_nodes ? 'blue-dot' : null}
-              updateID={updateID}
-            />
-          </MapContainer>
-        }
+          }
+          <MapGL
+            data={selected.length ? getSelectedSubset(selected, filtered) : filtered}
+            markerClass={all_nodes ? 'blue-dot' : null}
+            updateID={updateID}
+          />
+        </MapContainer>
+
       </Overview>
 
       {error &&

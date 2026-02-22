@@ -63,13 +63,13 @@ const getBBox = (coordinates) : [[number, number], [number, number]] => {
 
 
 const getValidCoords = (data: Data[]) =>
-  data.filter(({lat, lng}) => lat && lng)
+  (data || []).filter(({lat, lng}) => lat && lng)
     .map(({lat, lng}) => ({lng, lat}))
 
 
 
 const getGeoSpec = (data: Data[]) => {
-  const features = data
+  const features = (data || [])
     .filter(({lat, lng}) => lat && lng)
     .map(obj => ({
       type: 'Feature',
@@ -274,7 +274,7 @@ export default function MapGL(props: Props) {
           </Source>
         }
 
-        {markers
+        {(markers || [])
           .filter(o => o.lng && o.lat)
           .map(obj => {
             const {vsn, lng, lat, status} = obj
