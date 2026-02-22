@@ -100,7 +100,7 @@ function Image(props: ImageProps) {
 
   return (
     <ImageRoot>
-      <h3><Link to={`/node/${title}`}>{title}</Link></h3>
+      <h3><Link to={`/nodes/${title}`}>{title}</Link></h3>
       {bboxSpec ?
         <BoundingBoxOverlay src={url} {...bboxSpec} /> :
         <img src={url} />

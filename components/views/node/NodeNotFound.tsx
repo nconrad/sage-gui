@@ -39,7 +39,7 @@ export default function NodeNotFound() {
         The VSN <b>{vsn}</b> can not be found.
       </p>
       {recommended &&
-        <div>Were you looking for <a href={`/node/${recommended}`}>{recommended}</a>?</div>
+        <div>Were you looking for <a href={`/nodes/${recommended}`}>{recommended}</a>?</div>
       }
     </Root>
   )

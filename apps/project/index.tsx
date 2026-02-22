@@ -155,7 +155,7 @@ export default function App() {
                         <Route path="sensors" element={<SensorList {...{project, vsns}} />} />
                       </Route>
 
-                      <Route path="node/:vsn" element={<Node />} />
+                      <Route path="nodes/:vsn" element={<Node />} />
                       <Route path="sensors/:name" element={<Sensor />} />
 
                       <Route path="data" element={<Data {...{project, vsns}}  />} />

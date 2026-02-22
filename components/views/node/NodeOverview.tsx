@@ -320,7 +320,7 @@ export default function NodeOverview(props: Props) {
             </h1>
             {admin &&
               <Button
-                href={`${config.portal}/node/${vsn}`}
+                href={`${config.portal}/nodes/${vsn}`}
                 endIcon={<LoginRounded />}
               >
                 view portal
@@ -336,7 +336,7 @@ export default function NodeOverview(props: Props) {
                 admin ? 'Node health' : <>Admin page <LaunchIcon style={{fontSize: '1.1em'}}/></>
               }
             >
-              <Button href={node ? `${config.adminURL}/node/${vsn}?tab=health` : ''}>
+              <Button href={node ? `${config.adminURL}/nodes/${vsn}?tab=health` : ''}>
                 <span className={`${status == 'reporting' ? 'success font-bold' : 'failed font-bold'}`}>
                   {status}
                 </span>

@@ -46,7 +46,7 @@ test('nodes list has node W023', async ({ page }) => {
 
 
 test('W023 nodes page looks reasonable', async ({ page }) => {
-  await page.goto(`${url}/node/W023`)
+  await page.goto(`${url}/nodes/W023`)
 
   await expect(page.getByText('Wild Sage Node W023 000048B02D15BC7C')).toBeVisible()
 })

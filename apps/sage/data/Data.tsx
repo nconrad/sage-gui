@@ -417,7 +417,7 @@ export default function Data(props: Props) {
                       ${item.meta.plugin}<br>
                       ${item.value.toLocaleString()} records`
                     }
-                    yFormat={vsn => <Link to={`/node/${vsn}`} target="_blank">{vsn}</Link>}
+                    yFormat={vsn => <Link to={`/nodes/${vsn}`} target="_blank">{vsn}</Link>}
                     onCellClick={(data) => {
                       const {timestamp, meta} = data
                       const {vsn, plugin} = meta

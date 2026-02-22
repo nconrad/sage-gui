@@ -58,7 +58,7 @@ export const formatters = {
     vsns.map((vsn, i) => {
       const l = vsns.length - 1
       return <span key={vsn}>
-        <Link to={`/node/${vsn}`}>
+        <Link to={`/nodes/${vsn}`}>
           {vsn}
         </Link>{i < l ? ', '  : ''}
       </span>
@@ -489,7 +489,7 @@ export default function JobStatus() {
                   <Card key={i} className="title-row">
                     <div className="flex column">
                       <div>
-                        <h2><Link to={`/node/${vsn}`}>{vsn}</Link></h2>
+                        <h2><Link to={`/nodes/${vsn}`}>{vsn}</Link></h2>
                       </div>
                       <div>{location}</div>
                     </div>

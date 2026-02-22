@@ -12,6 +12,8 @@ ENV MAPBOX_TOKEN=${MAPBOX_TOKEN}
 WORKDIR /app
 COPY apps/${SAGE_UI_APP}/package.json ./apps/${SAGE_UI_APP}/package.json
 COPY package*.json .
+RUN npm install -g npm@11.10.0
+RUN npx update-browserslist-db@latest
 RUN npm install -w ${SAGE_UI_APP} --omit=dev
 COPY . .
 

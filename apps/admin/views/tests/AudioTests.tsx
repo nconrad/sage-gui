@@ -22,7 +22,7 @@ function AllAudios() {
 
       const ele = (
         <Chart key={vsn}>
-          <h2>Node <Link to={`/node/${vsn}`}>{vsn}</Link></h2>
+          <h2>Node <Link to={`/nodes/${vsn}`}>{vsn}</Link></h2>
           <Audio vsn={vsn} />
         </Chart>
       )

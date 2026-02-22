@@ -97,7 +97,7 @@ const sanityTestTooptip = (item) =>
     `
 
 const yFormat = vsn =>
-  <Link to={`/node/${vsn}?tab=health`} target="_blank" className="text-inherit">{vsn}</Link>
+  <Link to={`/nodes/${vsn}?tab=health`} target="_blank" className="text-inherit">{vsn}</Link>
 
 
 type TestOption = {
@@ -263,11 +263,11 @@ export default function TestView() {
 
   const handleCellClick = (item) => {
     const vsn = item.meta.vsn
-    navigate(`/node/${vsn}?tab=health`)
+    navigate(`/nodes/${vsn}?tab=health`)
   }
 
   const handleLabelClick = (label) => {
-    navigate(`/node/${label}?tab=health`)
+    navigate(`/nodes/${label}?tab=health`)
   }
 
 

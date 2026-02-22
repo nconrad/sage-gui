@@ -465,14 +465,14 @@ export function statusWithPhase(val, obj) {
 
 export function vsn(vsn, node) {
   const {site_id} = node
-  return <Link to={`/node/${vsn}`}>
+  return <Link to={`/nodes/${vsn}`}>
     {site_id || vsn}
   </Link>
 }
 
 export function vsnLink(vsn, node: BK.Node) {
   const {site_id} = node
-  return <Link to={`/node/${vsn}`}>
+  return <Link to={`/nodes/${vsn}`}>
     {site_id || vsn} <small className="muted">{site_id && `${vsn}` }</small>
   </Link>
 }
@@ -480,7 +480,7 @@ export function vsnLink(vsn, node: BK.Node) {
 export function vsnLinkWithEdit(vsn, node: BK.Node) {
   const {site_id} = node
   return <div className="flex items-center">
-    <Link to={`/node/${vsn}`}>
+    <Link to={`/nodes/${vsn}`}>
       {site_id || vsn} <small className="muted">{site_id && `${vsn}` }</small>
     </Link>
     <Tooltip
@@ -501,7 +501,7 @@ export function vsnLinkWithEdit(vsn, node: BK.Node) {
 
 export function vsnLinkNameOnly(vsn, node: BK.Node) {
   const {site_id} = node
-  return <Link to={`/node/${vsn}`}>
+  return <Link to={`/nodes/${vsn}`}>
     {site_id || vsn}
   </Link>
 }
@@ -566,7 +566,7 @@ export function modem(_, obj) {
         }
       </small>
       <div>
-        {hwModel && <Link to={`/node/${obj.vsn}?tab=peripherals`}>{hwModel}</Link>}
+        {hwModel && <Link to={`/nodes/${obj.vsn}?tab=peripherals`}>{hwModel}</Link>}
       </div>
     </>
   )
