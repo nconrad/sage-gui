@@ -204,6 +204,8 @@ type Props = {
   markerClass?: 'blue-dot'
   updateID?: number | string
   showUptime?: boolean
+  autoFitBounds?: boolean
+  mapSettings?: Partial<MapProps>
 }
 
 
@@ -212,7 +214,9 @@ export default function MapGL(props: Props) {
     data = null,
     markerClass,
     updateID,
-    showUptime = true
+    showUptime = true,
+    autoFitBounds = true,
+    mapSettings: mapSettingsOverride
   } = props
 
   const {mode, systemMode} = useColorScheme()
@@ -226,16 +230,11 @@ export default function MapGL(props: Props) {
   const [markers, setMarkers] = useState<Data[]>([])
 
   // keep track of primary keys
-  const [lastID, setLastID] = useState(-1)
+  const [lastID, setLastID] = useState<number | string>(-1)
 
   // just determine when to update for now
   useEffect(() => {
     if (DISABLE_MAP) return
-
-    // do a manual comparison for dynamic ping updates
-    if (lastID == updateID) {
-      return
-    }
 
     const d = data
     const geoData = getGeoSpec(d)
@@ -245,12 +244,30 @@ export default function MapGL(props: Props) {
     setGeoData(geoData)
     setMarkers(d)
 
-    if (mapRef.current && coords.length) {
-      mapRef.current.fitBounds(bbox, { padding: fitBoundsPadding, maxZoom: 10 })
+    if (autoFitBounds && mapRef.current && coords.length) {
+      mapRef.current.on('load', () => {
+        mapRef.current.fitBounds(bbox, { padding: fitBoundsPadding, maxZoom: 10 })
+      })
     }
 
     setLastID(updateID)
-  }, [data, updateID, lastID])
+
+  }, [data, autoFitBounds])
+
+
+  useEffect(() => {
+    if (!data?.length || lastID === updateID || !mapRef.current) return
+
+    const d = data
+    const coords = getValidCoords(d)
+
+    if (!coords.length) return
+
+    const bbox = getBBox(coords)
+
+    mapRef.current.fitBounds(bbox, { padding: fitBoundsPadding, maxZoom: 10 })
+
+  }, [updateID, data, lastID])
 
 
   const handleClick = (evt: MapboxEvent<MouseEvent>, obj: Data) => {
@@ -261,7 +278,7 @@ export default function MapGL(props: Props) {
   return (
     <Root>
       <Map ref={mapRef}
-        {...mapSettings}
+        {...{...mapSettings, ...mapSettingsOverride}}
         mapStyle={
           `mapbox://styles/mapbox/${(mode === 'system' ? systemMode : mode) === 'dark' ? 'dark-v10' : 'light-v9'}`
         }>

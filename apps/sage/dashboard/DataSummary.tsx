@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
-import { ViewTimelineOutlined } from '@mui/icons-material'
-import { Button, ButtonGroup } from '@mui/material'
+import { Sort, ViewTimelineOutlined } from '@mui/icons-material'
+import { Button, ButtonGroup, Autocomplete, TextField, Chip, IconButton, Tooltip } from '@mui/material'
+import { SortByAlpha, Tag } from '@mui/icons-material'
 import { subDays, subYears } from 'date-fns'
 
 import { Card } from '/components/layout/Layout'
 import Timeline from '/components/viz/Timeline'
 import TimelineSkeleton from '/components/viz/TimelineSkeleton'
+import { getRangeTitle } from '/components/utils/units'
 import DataOptions from '/components/input/DataOptions'
 import { fetchRollup } from '/apps/sage/data/rollupUtils'
 import { processTimelineData } from './dashboardUtils'
 import { colorDensity } from '../data/Data'
 import { type Options } from '/apps/sage/data/Data'
+import SageProjectFilter from './SageProjectFilter'
 
 import * as BK from '/components/apis/beekeeper'
 import * as ES from '/components/apis/ses'
@@ -51,6 +54,11 @@ export default function DataSummary({
   const [timelineByApp, setTimelineByApp] = useState(null)
   const [loadingTimeline, setLoadingTimeline] = useState(false)
   const [showAll, setShowAll] = useState(false)
+
+  const [selectedApps, setSelectedApps] = useState<string[]>([])
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([])
+  const [sortAppsByCount, setSortAppsByCount] = useState(true)
+  const [sortNodesByCount, setSortNodesByCount] = useState(true)
 
   const [opts, setOpts] = useState<Options>({
     display: 'nodes',
@@ -167,12 +175,252 @@ export default function DataSummary({
     if (isLoading) {
       return <TimelineSkeleton includeHeader={false} />
     }
-    const timelineData = timelineTab === 'nodes' ? timelineByNode : timelineByApp
+
+    let timelineData = timelineTab === 'nodes' ? timelineByNode : timelineByApp
+
+    // Apply filters to timeline data
+    if (timelineTab === 'nodes' && selectedApps.length > 0) {
+      // Filter nodes by selected apps
+      const filtered = {}
+      Object.entries(timelineData || {}).forEach(([node, data]) => {
+        const filteredData = (data as any[]).map(item => {
+          const apps = item.meta?.apps || {}
+          const filteredApps = {}
+          let totalValue = 0
+
+          Object.entries(apps).forEach(([app, count]) => {
+            if (selectedApps.includes(app)) {
+              filteredApps[app] = count
+              totalValue += count as number
+            }
+          })
+
+          return totalValue > 0 ? {
+            ...item,
+            value: totalValue,
+            meta: { ...item.meta, apps: filteredApps }
+          } : null
+        }).filter(Boolean)
+
+        if (filteredData.length > 0) {
+          filtered[node] = filteredData
+        }
+      })
+      timelineData = filtered
+    } else if (timelineTab === 'apps' && selectedNodes.length > 0) {
+      // Filter apps by selected nodes
+      const filtered = {}
+      Object.entries(timelineData || {}).forEach(([app, data]) => {
+        const filteredData = (data as any[]).map(item => {
+          const nodes = item.meta?.nodes || {}
+          const filteredNodes = {}
+          let totalValue = 0
+
+          Object.entries(nodes).forEach(([node, count]) => {
+            if (selectedNodes.includes(node)) {
+              filteredNodes[node] = count
+              totalValue += count as number
+            }
+          })
+
+          return totalValue > 0 ? {
+            ...item,
+            value: totalValue,
+            meta: { ...item.meta, nodes: filteredNodes }
+          } : null
+        }).filter(Boolean)
+
+        if (filteredData.length > 0) {
+          filtered[app] = filteredData
+        }
+      })
+      timelineData = filtered
+    }
+
     const hasData = timelineData && Object.keys(timelineData).length > 0
+
+    // Extract available apps from node timeline data with counts
+    const appCounts = new Map<string, number>()
+    if (timelineTab === 'nodes' && timelineByNode) {
+      Object.values(timelineByNode).forEach((data: any) => {
+        data.forEach(item => {
+          Object.entries(item.meta?.apps || {}).forEach(([app, count]) => {
+            appCounts.set(app, (appCounts.get(app) || 0) + (count as number))
+          })
+        })
+      })
+    }
+    const availableApps = new Set<string>(appCounts.keys())
+
+    // Sort apps by count or alphabetically
+    const sortedApps = Array.from(appCounts.entries())
+      .sort((a, b) => {
+        if (sortAppsByCount) {
+          return b[1] - a[1] // Sort by count descending
+        }
+        return a[0].localeCompare(b[0]) // Sort alphabetically
+      })
+
+    // Extract available nodes from app timeline data with counts
+    const nodeCounts = new Map<string, number>()
+    if (timelineTab === 'apps' && timelineByApp) {
+      Object.values(timelineByApp).forEach((data: any) => {
+        data.forEach(item => {
+          Object.entries(item.meta?.nodes || {}).forEach(([node, count]) => {
+            nodeCounts.set(node, (nodeCounts.get(node) || 0) + (count as number))
+          })
+        })
+      })
+    }
+    const availableNodes = new Set<string>(nodeCounts.keys())
+
+    // Sort nodes by count or alphabetically
+    const sortedNodes = Array.from(nodeCounts.entries())
+      .sort((a, b) => {
+        if (sortNodesByCount) {
+          return b[1] - a[1] // Sort by count descending
+        }
+        return a[0].localeCompare(b[0]) // Sort alphabetically
+      })
 
     return (
       <>
         <TimelineContainer>
+          <div>
+            {timelineTab === 'nodes' && availableApps.size > 0 && (
+              <FilterChipsContainer>
+                <FilterLabel>Filter by:</FilterLabel>
+                <Autocomplete
+                  multiple
+                  size="small"
+                  options={sortedApps.map(([app]) => app)}
+                  value={selectedApps}
+                  onChange={(_, newValue) => setSelectedApps(newValue)}
+                  limitTags={5}
+                  getOptionLabel={(option) => option}
+                  renderOption={(props, option) => {
+                    const count = appCounts.get(option) || 0
+                    return (
+                      <li {...props} style={{ display: 'flex', justifyContent: 'space-between', ...props.style }}>
+                        <span>{option}</span>
+                        <span style={{ fontWeight: 600, color: '#999', marginLeft: '1rem' }}>
+                          {count.toLocaleString()}
+                        </span>
+                      </li>
+                    )
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Apps"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            <Tooltip title={sortAppsByCount ?
+                              'Sorted by count (click for A-Z)' : 'Sorted A-Z (click for count)'}>
+                              <IconButton
+                                size="small"
+                                onClick={() => setSortAppsByCount(!sortAppsByCount)}
+                                sx={{ mr: 0.5 }}
+                              >
+                                {sortAppsByCount ? <Sort fontSize="small" /> : <SortByAlpha fontSize="small" />}
+                              </IconButton>
+                            </Tooltip>
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        label={option}
+                        size="small"
+                        {...getTagProps({ index })}
+                        key={option}
+                      />
+                    ))
+                  }
+                  sx={{ flex: 1 }}
+                />
+              </FilterChipsContainer>
+            )}
+            {timelineTab === 'apps' && availableNodes.size > 0 && (
+              <FilterChipsContainer>
+                <FilterLabel>Filter by:</FilterLabel>
+                <Autocomplete
+                  multiple
+                  size="small"
+                  options={sortedNodes.map(([node]) => node)}
+                  value={selectedNodes}
+                  onChange={(_, newValue) => setSelectedNodes(newValue)}
+                  limitTags={10}
+                  getOptionLabel={(option) => option}
+                  renderOption={(props, option) => {
+                    const count = nodeCounts.get(option) || 0
+                    return (
+                      <li {...props} style={{ display: 'flex', justifyContent: 'space-between', ...props.style }}>
+                        <span>{option}</span>
+                        <span style={{ fontWeight: 600, color: '#999', marginLeft: '1rem' }}>
+                          {count.toLocaleString()}
+                        </span>
+                      </li>
+                    )
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Nodes"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            <Tooltip title={sortNodesByCount ?
+                              'Sorted by count (click for A-Z)' : 'Sorted A-Z (click for count)'}>
+                              <IconButton
+                                size="small"
+                                onClick={() => setSortNodesByCount(!sortNodesByCount)}
+                                sx={{ mr: 0.5 }}
+                              >
+                                {sortNodesByCount ? <Sort fontSize="small" /> : <SortByAlpha fontSize="small" />}
+                              </IconButton>
+                            </Tooltip>
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        label={option}
+                        size="small"
+                        {...getTagProps({ index })}
+                        key={option}
+                      />
+                    ))
+                  }
+                  sx={{ flex: 1 }}
+                />
+              </FilterChipsContainer>
+            )}
+          </div>
+          <div className="timeline-title flex items-start gap">
+            <h2>{getRangeTitle(opts.window)}</h2>
+            <DataOptions
+              onChange={handleOptionChange}
+              opts={opts}
+              quickRanges={['-1y', '-90d', '-30d', '-7d', '-2d']}
+              showAll
+              condensed
+              aggregation
+            />
+          </div>
+
+
           {timelineTab === 'nodes' ? (
             <Timeline
               data={timelineData || {}}
@@ -256,48 +504,40 @@ export default function DataSummary({
     <WideSection>
       <FilterBar>
         <FilterGroup>
-          <FilterLabel>Filter by:</FilterLabel>
+          {/* <FilterLabel>Filter by:</FilterLabel> */}
+          <SageProjectFilter
+            projectFilter={projectFilter}
+            onProjectFilterChange={onProjectFilterChange}
+            allNodesCount={allNodesCount}
+            sageNodesCount={sageNodesCount}
+            sgtNodesCount={sgtNodesCount}
+          />
           <ButtonGroup size="small" variant="outlined">
             <Button
-              onClick={() => onProjectFilterChange('all')}
-              variant={projectFilter === 'all' ? 'contained' : 'outlined'}
-            >
-              All ({allNodesCount})
-            </Button>
-            <Button
-              onClick={() => onProjectFilterChange('SAGE')}
-              variant={projectFilter === 'SAGE' ? 'contained' : 'outlined'}
-            >
-              Sage ({sageNodesCount})
-            </Button>
-            <Button
-              onClick={() => onProjectFilterChange('SGT')}
-              variant={projectFilter === 'SGT' ? 'contained' : 'outlined'}
-            >
-              SGT ({sgtNodesCount})
-            </Button>
-          </ButtonGroup>
-        </FilterGroup>
-
-        <FilterGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Button
-              onClick={() => setTimelineTab('nodes')}
+              onClick={() => {
+                setTimelineTab('nodes')
+                setSelectedApps([])
+                setSelectedNodes([])
+              }}
               variant={timelineTab === 'nodes' ? 'contained' : 'outlined'}
             >
-              My Node Data
+              By Node
             </Button>
             <Button
-              onClick={() => setTimelineTab('apps')}
+              onClick={() => {
+                setTimelineTab('apps')
+                setSelectedApps([])
+                setSelectedNodes([])
+              }}
               variant={timelineTab === 'apps' ? 'contained' : 'outlined'}
             >
-              My App Data
+              By App
             </Button>
           </ButtonGroup>
         </FilterGroup>
 
         <FilterGroup>
-          <FilterLabel>Show data for:</FilterLabel>
+          {/* <FilterLabel>Show data for:</FilterLabel> */}
           <ButtonGroup size="small" variant="outlined">
             <Button
               onClick={() => setTimelineFilter('jobs')}
@@ -316,16 +556,6 @@ export default function DataSummary({
       </FilterBar>
 
       <Card>
-        <TimelineHeader>
-          <DataOptions
-            onChange={handleOptionChange}
-            opts={opts}
-            quickRanges={['-1y', '-90d', '-30d', '-7d', '-2d']}
-            showAll
-            condensed
-            aggregation
-          />
-        </TimelineHeader>
         {renderContent()}
       </Card>
     </WideSection>
@@ -357,6 +587,8 @@ const FilterBar = styled('div')`
   }
 `
 
+
+
 const FilterGroup = styled('div')`
   display: flex;
   align-items: center;
@@ -371,18 +603,10 @@ const FilterLabel = styled('span')`
 
 const TimelineContainer = styled('div')`
   overflow-x: auto;
-`
 
-const TimelineHeader = styled('div')`
-  padding: 1rem 1.5rem 0.5rem 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 1rem;
-
-  @media (max-width: 900px) {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+  .timeline-title {
+    float: left;
+    h2 { margin: 0 1em 0 0;}
   }
 `
 
@@ -411,5 +635,19 @@ const EmptyIcon = styled('div')`
   svg {
     font-size: 4em;
     opacity: 0.3;
+  }
+`
+
+const FilterChipsContainer = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5'};
+  border-radius: 8px;
+  .MuiInputBase-root {
+    background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#fff'};
   }
 `

@@ -29,10 +29,11 @@ export default function Dashboard() {
   const [allNodes, setAllNodes] = useState<BK.Node[]>()
   const [projects, setProjects] = useState<User.Project[]>()
   const [apps, setApps] = useState<ECR.AppDetails[]>()
-  const [jobs, setJobs] = useState<ES.Job[]>()
+  const [userJobs, setUserJobs] = useState<ES.Job[]>()
   const [allJobs, setAllJobs] = useState<ES.Job[]>()
   const [sensors, setSensors] = useState<BK.SensorListRow[]>()
   const [projectFilter, setProjectFilter] = useState<'all' | 'SAGE' | 'SGT'>('all')
+  const [selectedNodes, setSelectedNodes] = useState<BK.Node[]>([])
 
   const [error, setError] = useState(null)
 
@@ -51,15 +52,14 @@ export default function Dashboard() {
 
     // Fetch apps
     const p2 = ECR.listApps('mine')
-      .then(data => setApps(data.slice(0, 5))) // Show only 5 most recent
+      .then(data => setApps(data))
       .catch(err => setError(err))
 
     // Fetch jobs
     const p3 = ES.getJobs()
       .then(data => {
         const userJobs = data.filter(job => job.user === Auth.user)
-        setAllJobs(userJobs) // Store all jobs for filtering
-        setJobs(userJobs.slice(0, 5)) // Show only 5 most recent
+        setUserJobs(userJobs)
       })
       .catch(err => setError(err))
 
@@ -81,11 +81,12 @@ export default function Dashboard() {
     ? new Set(projects.flatMap(p => p.members.map(m => m.username))).size
     : undefined
   const totalApps = apps?.length
-  const activeJobs = jobs?.filter(job => {
+  const activeJobs = userJobs?.filter(job => {
     const status = job.state.last_state?.toLowerCase()
     return status === 'scheduled' || status === 'running'
   }).length
-  const totalJobs = jobs?.length
+
+  const totalJobs = userJobs?.length
 
   const statsLoading = [
     uniqueNodes,
@@ -154,13 +155,13 @@ export default function Dashboard() {
         </TopSection>
 
         <DataSummary
-          allNodes={filteredNodes}
+          allNodes={selectedNodes.length > 0 ? selectedNodes : filteredNodes}
           allJobs={filteredAllJobs}
           projectFilter={projectFilter}
           onProjectFilterChange={setProjectFilter}
           allNodesCount={allNodes?.length ?? 0}
-          sageNodesCount={allNodes?.filter(n => n.project?.includes('SAGE')).length ?? 0}
-          sgtNodesCount={allNodes?.filter(n => n.project?.includes('SGT')).length ?? 0}
+          sageNodesCount={allNodes?.filter(n => n.project?.includes('SAGE')).length}
+          sgtNodesCount={allNodes?.filter(n => n.project?.includes('SGT')).length}
         />
 
         <NodesOverview
@@ -168,15 +169,16 @@ export default function Dashboard() {
           sensors={filteredSensors}
           projectFilter={projectFilter}
           onProjectFilterChange={setProjectFilter}
+          onNodeSelect={setSelectedNodes}
           allNodesCount={allNodes?.length ?? 0}
-          sageNodesCount={allNodes?.filter(n => n.project?.includes('SAGE')).length ?? 0}
-          sgtNodesCount={allNodes?.filter(n => n.project?.includes('SGT')).length ?? 0}
+          sageNodesCount={allNodes?.filter(n => n.project?.includes('SAGE')).length}
+          sgtNodesCount={allNodes?.filter(n => n.project?.includes('SGT')).length}
         />
 
         <Masonry columns={{ xs: 1, sm: 1, md: 2, lg: 2 }} spacing={2}>
           <ProjectsSection projects={projects} />
           <AppsSection apps={apps} />
-          <JobsSection jobs={jobs} />
+          <JobsSection jobs={userJobs} />
         </Masonry>
       </Root>
     </RequireAuth>

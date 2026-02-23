@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
 import { AppsRounded, ArrowForwardRounded } from '@mui/icons-material'
@@ -33,12 +34,15 @@ const appColumns = [{
 
 
 export default function AppsSection({ apps }: AppsSectionProps) {
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+
   return (
     <Section>
       <Card>
         <SectionHeader>
           <SectionTitle>
-            <AppsRounded /> My Apps
+            <AppsRounded /> Recent Apps
           </SectionTitle>
           {apps && apps.length > 0 &&
             <ViewAllLink to="/apps/my-apps">
@@ -51,10 +55,18 @@ export default function AppsSection({ apps }: AppsSectionProps) {
         ) : apps.length > 0 ? (
           <Table
             primaryKey="id"
+            enableSorting
+            sort="-time_last_updated"
             columns={appColumns}
             rows={apps}
-            pagination={false}
-            enableSorting={false}
+            pagination={true}
+            page={page}
+            onPage={(newPage) => setPage(newPage)}
+            rowsPerPage={10}
+            limit={apps.length}
+            search={search}
+            onSearch={({query}) => setSearch(query)}
+            middleComponent={<></>}
           />
         ) : (
           <EmptyState>

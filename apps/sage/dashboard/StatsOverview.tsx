@@ -71,7 +71,7 @@ export default function StatsOverview({
           <StatContent>
             <StatValue>{formatValue(totalApps)}</StatValue>
             <StatLabel>
-              My App{isLoaded(totalApps) && totalApps !== 1 ? 's' : ''}
+              App{isLoaded(totalApps) && totalApps !== 1 ? 's' : ''}
             </StatLabel>
           </StatContent>
         </StatCard>

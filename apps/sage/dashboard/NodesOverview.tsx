@@ -14,6 +14,7 @@ import Table from '/components/table/Table'
 import { queryData } from '/components/data/queryData'
 import MapGL from '/components/Map'
 import { Card } from '/components/layout/Layout'
+import SageProjectFilter from './SageProjectFilter'
 
 import * as BK from '/components/apis/beekeeper'
 import * as User from '/components/apis/user'
@@ -25,6 +26,7 @@ type NodesOverviewProps = {
   sensors: BK.SensorListRow[]
   projectFilter: 'all' | 'SAGE' | 'SGT'
   onProjectFilterChange: (value: 'all' | 'SAGE' | 'SGT') => void
+  onNodeSelect?: (nodes: BK.Node[]) => void
   allNodesCount: number
   sageNodesCount: number
   sgtNodesCount: number
@@ -91,7 +93,7 @@ const sensorColumns = [{
 }, {
   id: 'title',
   label: 'Name',
-  format: (_, obj) => getTitle(obj.hw_model, obj.description)
+  format: (_, obj) => <Link to={`/sensors/${obj.hw_model}`}>{getTitle(obj.hw_model, obj.description)}</Link>
 }, {
   id: 'capabilities',
   label: 'Capabilities',
@@ -123,6 +125,7 @@ export default function NodesOverview({
   sensors,
   projectFilter,
   onProjectFilterChange,
+  onNodeSelect,
   allNodesCount,
   sageNodesCount,
   sgtNodesCount
@@ -132,6 +135,8 @@ export default function NodesOverview({
   const [sensorPage, setSensorPage] = useState(0)
   const [sensorSearch, setSensorSearch] = useState('')
   const [nodesTab, setNodesTab] = useState<'nodes' | 'sensors'>('nodes')
+
+  const [selected, setSelected] = useState<BK.Node[]>([])
 
   const toggleAccessFilter = (access: User.AccessPerm) => {
     setAccessFilters(prev => {
@@ -174,7 +179,7 @@ export default function NodesOverview({
   const mapNodes = filteredNodes.map(node => ({
     ...node,
     sensor: node.sensors?.map(s => s.hw_model) || [],
-    status: 'unknown', // Status will be determined by MapGL from live data
+    // status: 'unknown', // Status could be determined by MapGL from live data; todo(nc)
     elapsedTimes: {} // Will be populated by live data if available
   }))
 
@@ -189,44 +194,27 @@ export default function NodesOverview({
     <NodesOverviewSection>
       <FilterBar>
         <FilterGroup>
-          <FilterLabel>Filter by:</FilterLabel>
-          <ButtonGroup size="small" variant="outlined">
-            <Button
-              onClick={() => onProjectFilterChange('all')}
-              variant={projectFilter === 'all' ? 'contained' : 'outlined'}
-            >
-              All ({allNodesCount})
-            </Button>
-            <Button
-              onClick={() => onProjectFilterChange('SAGE')}
-              variant={projectFilter === 'SAGE' ? 'contained' : 'outlined'}
-            >
-              Sage ({sageNodesCount})
-            </Button>
-            <Button
-              onClick={() => onProjectFilterChange('SGT')}
-              variant={projectFilter === 'SGT' ? 'contained' : 'outlined'}
-            >
-              SGT ({sgtNodesCount})
-            </Button>
-          </ButtonGroup>
-        </FilterGroup>
-
-        <FilterGroup>
+          <SageProjectFilter
+            projectFilter={projectFilter}
+            onProjectFilterChange={onProjectFilterChange}
+            allNodesCount={allNodesCount}
+            sageNodesCount={sageNodesCount}
+            sgtNodesCount={sgtNodesCount}
+          />
           <ButtonGroup size="small" variant="outlined">
             <Button
               onClick={() => setNodesTab('nodes')}
               variant={nodesTab === 'nodes' ? 'contained' : 'outlined'}
-              startIcon={<HubOutlined />}
+              // startIcon={<HubOutlined />}
             >
-              My Nodes
+              Nodes
             </Button>
             <Button
               onClick={() => setNodesTab('sensors')}
               variant={nodesTab === 'sensors' ? 'contained' : 'outlined'}
-              startIcon={<SensorsOutlined />}
+              // startIcon={<SensorsOutlined />}
             >
-              My Sensors
+              Sensors
             </Button>
           </ButtonGroup>
         </FilterGroup>
@@ -271,9 +259,14 @@ export default function NodesOverview({
               </SectionHeader>
               <MapContainer>
                 <MapGL
-                  data={mapNodes}
-                  updateID={`${filteredNodes.length}-${Array.from(accessFilters).sort().join(',')}`}
+                  data={selected.length ? selected : mapNodes}
+                  updateID={
+                    `${selected.map(node => node.vsn).join(',')}` +
+                    `-${filteredNodes.length}-${Array.from(accessFilters).sort().join(',')}`
+                  }
                   markerClass="blue-dot"
+                  autoFitBounds={true}
+                  mapSettings={{style: {height: '400px'}}}
                 />
               </MapContainer>
             </div>
@@ -282,7 +275,7 @@ export default function NodesOverview({
             <div>
               <SectionHeader>
                 <SectionTitle>
-                  <HubOutlined /> Nodes
+                  <HubOutlined /> My Nodes
                 </SectionTitle>
                 {tableNodes && tableNodes.length > 0 &&
                 <ViewAllLink to={`/user/${Auth.user}/nodes`}>
@@ -296,6 +289,11 @@ export default function NodesOverview({
                     primaryKey="vsn"
                     columns={nodeColumns}
                     rows={tableNodes}
+                    onSelect={state => {
+                      const selectedNodes = state.objs as BK.Node[]
+                      setSelected(selectedNodes)
+                      onNodeSelect?.(selectedNodes)
+                    }}
                   />
                 </ScrollableTableContainer>
               ) : (
@@ -309,7 +307,7 @@ export default function NodesOverview({
           </NodesGrid>
         ) : (
           // Sensors Tab Content
-          <div style={{ padding: '1.5rem' }}>
+          <div>
             {(() => {
               const userVSNs = new Set(allNodes?.map(n => n.vsn) || [])
               const baseSensors = sensors?.filter(s =>
@@ -402,7 +400,7 @@ export default function NodesOverview({
                         pagination={true}
                         page={sensorPage}
                         limit={userSensors.length}
-                        rowsPerPage={10}
+                        rowsPerPage={20}
                         onPage={(newPage) => setSensorPage(newPage)}
                         enableSorting={true}
                         search={sensorSearch}

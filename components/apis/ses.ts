@@ -193,6 +193,7 @@ type JobRecord = {
 export type Job = JobRecord & {
   job_id: number   // converted from string to number
   nodes: BK.VSN[]
+  status: State
 } & JobRecord['state']
 
 
@@ -226,6 +227,8 @@ async function listJobs(params?: ListJobsParams) : Promise<Job[]> {
   data = Object.values(data)
 
   data = user ? data.filter(o => o.user == user) : data
+
+  data = data.map((obj) => ({...obj, status: obj.state.last_state}))
 
   return data
 }

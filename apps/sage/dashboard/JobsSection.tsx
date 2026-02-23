@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
 import { PlaylistAddCheckRounded, ArrowForwardRounded } from '@mui/icons-material'
@@ -9,23 +10,17 @@ import { relativeTime } from '/components/utils/units'
 import * as ES from '/components/apis/ses'
 
 
-type JobsSectionProps = {
-  jobs: ES.Job[]
-}
-
 
 const jobColumns = [{
   id: 'name',
   label: 'Job',
   format: (val, row) => <Link to={`/jobs/my-jobs?job=${row.id}`}>{val}</Link>
 }, {
-  id: 'status',
+  id: 'last_state',
   label: 'Status',
-  format: (_, obj) => {
-    let status = obj.state.last_state || '-'
-    status = status.toLowerCase()
-    return <b className={status}>{status}</b>
-  }
+  format: (val) => {
+    return <b className={val.toLowerCase()}>{val || '-'}</b>
+  },
 }, {
   id: 'nodes',
   label: 'Nodes',
@@ -36,8 +31,14 @@ const jobColumns = [{
   format: (val) => relativeTime(val) || '-'
 }]
 
+type JobsSectionProps = {
+  jobs: ES.Job[]
+}
 
 export default function JobsSection({ jobs }: JobsSectionProps) {
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+
   return (
     <Section>
       <Card>
@@ -56,10 +57,18 @@ export default function JobsSection({ jobs }: JobsSectionProps) {
         ) : jobs.length > 0 ? (
           <Table
             primaryKey="id"
+            enableSorting
+            sort="-last_submitted"
             columns={jobColumns}
             rows={jobs}
-            pagination={false}
-            enableSorting={false}
+            pagination={true}
+            page={page}
+            onPage={(newPage) => setPage(newPage)}
+            rowsPerPage={10}
+            limit={jobs.length}
+            search={search}
+            onSearch={({query}) => setSearch(query)}
+            middleComponent={<></>}
           />
         ) : (
           <EmptyState>

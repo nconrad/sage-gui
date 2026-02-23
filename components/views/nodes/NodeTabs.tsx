@@ -159,7 +159,7 @@ const getNavItems = (includeSensors, search) => {
       tooltip: 'My SGT Nodes',
       minimizedLabel: 'My SGT Nodes',
       indent: true,
-      parentId: 'user/nodes'
+      parentId: 'user/nodes', // ignore query params and user-specific paths for active state
     },
     {
       to: `user/${Auth.user}/nodes/project/sage?show_all=true`,
@@ -177,7 +177,7 @@ const getNavItems = (includeSensors, search) => {
       tooltip: 'My Sage Nodes',
       minimizedLabel: 'My Sage Nodes',
       indent: true,
-      parentId: 'user/nodes'
+      parentId: 'user/nodes',
     },
   ]
 
@@ -225,7 +225,8 @@ export default function NodeTabs(props: Props) {
         }}
         itemIdGenerator={(item) => {
           if (item === 'divider') return ''
-          return item.to?.replace(`user/${Auth.user}/`, 'user/') || ''
+          // ignore query params and user-specific paths for active state
+          return item.to?.split('?')[0]?.replace(`user/${Auth.user}/nodes`, 'user/nodes') || ''
         }}
         onMinimizedChange={setMinimized}
       />

@@ -77,10 +77,8 @@ const jobCols = [{
 }, {
   id: 'status',
   label: 'Status',
-  format: (_, obj) => {
-    let status = obj.state.last_state || '-'
-    status = status.toLowerCase()
-    return <b className={status}>{status}</b>
+  format: (val) => {
+    return <b className={val.toLowerCase()}>{val || '-'}</b>
   },
   width: '100px'
 }, {
