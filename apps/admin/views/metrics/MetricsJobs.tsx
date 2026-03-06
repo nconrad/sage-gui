@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
 
 
 import * as BK from '/components/apis/beekeeper'
@@ -266,11 +266,11 @@ export default function MetricsByFilters() {
 }
 
 
-const Root = styled.div`
+const Root = styled('div')`
 `
 
 
-const Main = styled.main`
+const Main = styled('main')`
   width: 100%;
   margin: 2em;
 `

@@ -8,3 +8,7 @@ coverage/
 Dockerfile
 *token*
 *Token*
+apps/admin/views/metrics/settings.ts
+.env
+.env.*
+!.env.example

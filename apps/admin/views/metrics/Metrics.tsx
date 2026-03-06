@@ -1,41 +1,73 @@
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { BarChartRounded, GroupOutlined, NumbersRounded, Timeline } from '@mui/icons-material'
 
-import Tabber from '/components/tabs/Tabber'
-import { Card, CardViewStyle } from '/components/layout/Layout'
-
-// import DevicesIcon from '@mui/icons-material/DeviceHubRounded'
+import CollapsibleNavSidebar, { NavItem } from '/components/layout/CollapsibleNavSidebar'
+import { CardViewStyle } from '/components/layout/Layout'
 
 
-const tabs = [{
-  label: 'Overview',
-  to: '/metrics/overview'
-}, {
-  label: 'Count by Filters',
-  to: '/metrics/filters'
-}]
-
+const getNavItems = (): NavItem[] => [
+  {
+    to: '/metrics/accounts',
+    icon: <GroupOutlined />,
+    label: 'Accounts',
+    tooltip: 'User Accounts'
+  },
+  /* { Todo: finish, fix bug
+    to: '/metrics/uploads',
+    icon: <ViewTimelineOutlined />,
+    label: 'File Uploads',
+    tooltip: 'File Uploads'
+  },
+  */
+  {
+    to: '/metrics/apps',
+    icon: <BarChartRounded />,
+    label: 'App Data',
+    tooltip: 'User App Data'
+  },
+  {
+    to: '/metrics/jobs',
+    icon: <Timeline />,
+    label: 'Job Counts',
+    tooltip: 'Job Counts'
+  },
+  {
+    to: '/metrics/at-a-glance',
+    icon: <NumbersRounded />,
+    label: 'At a Glance',
+    tooltip: 'Metrics Overview'
+  }
+]
 
 export default function Metrics() {
+  const navItems = getNavItems()
+  const [minimized, setMinimized] = useState(false)
 
   return (
     <Root>
       {CardViewStyle}
-
-      <Card>
-        <Tabber
-          defaultValue={'/accounts/profile'}
-          ariaLabel="my account tabs"
-          tabs={tabs}
-        />
-        <br/>
+      <CollapsibleNavSidebar
+        navItems={navItems}
+        storageKey="metrics.sidebar.state"
+        onMinimizedChange={setMinimized}
+      />
+      <Main $minimized={minimized}>
         <Outlet />
-
-      </Card>
+      </Main>
     </Root>
   )
 }
 
-const Root = styled.div`
-  margin: 40px 100px 500px 100px;
+const Root = styled('div')`
+//  display: flex;
+  height: 100%;
+`
+
+const Main = styled('div')<{ $minimized: boolean }>`
+  margin: 20px 0 40px 0;
+  flex-grow: 1;
+  margin-left: ${({ $minimized }) => $minimized ? `85px` : `170px`};
+  transition: margin-left .5s ease;
 `

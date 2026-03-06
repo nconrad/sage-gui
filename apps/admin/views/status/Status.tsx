@@ -1,6 +1,6 @@
 /* eslint-disable react/display-name */
 import { useState, useEffect, useRef } from 'react'
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
 import { useSearchParams } from 'react-router-dom'
 
 import Button from '@mui/material/Button'
@@ -383,24 +383,23 @@ const VertDivider = () =>
   <Divider orientation="vertical" flexItem style={{margin: '5px 15px 5px 15px' }} />
 
 
-const Root = styled.div`
+const Root = styled('div')`
 `
 
-const Overview = styled.div`
+const Overview = styled('div')`
   top: 60px;
   z-index: 100;
   padding: 20px 0 10px 0;
-  background: #fff;
-  border-bottom: 1px solid #f2f2f2;
+  border-bottom: 1px solid ${props => props.theme.palette.divider};
 `
 
-const Title = styled.h2`
+const Title = styled('h2')`
   margin: .5em;
   position: absolute;
   z-index: 1000;
 `
 
-const TableContainer = styled.div`
+const TableContainer = styled('div')`
   margin-top: .5em;
   table thead th:first-child {
     text-align: center;
@@ -420,7 +419,7 @@ const TableContainer = styled.div`
   }
 `
 
-const FilterControls = styled.div`
+const FilterControls = styled('div')`
   margin-left: 1.5em;
 `
 

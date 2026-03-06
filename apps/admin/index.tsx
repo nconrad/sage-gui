@@ -23,8 +23,11 @@ import ImageTests from './views/tests/ImageTests'
 import DescriptionTests from './views/tests/DescriptionTests'
 
 import Metrics from './views/metrics/Metrics'
-import MetricsOverview from './views/metrics/Overview'
-import MetricsByFilters from './views/metrics/ByFilter'
+import MetricsOverview from './views/metrics/MetricsApps'
+import MetricsJobs from './views/metrics/MetricsJobs'
+import MetricsAccounts from './views/metrics/MetricsAccounts'
+import MetricsUploads from './views/metrics/MetricsUploads'
+import MetricsAtAGlance from './views/metrics/MetricsAtAGlance'
 
 import MonitorIcon from '@mui/icons-material/MonitorHeartOutlined'
 import ImageIcon from '@mui/icons-material/ImageOutlined'
@@ -58,8 +61,8 @@ const NavMenu = () => {
     <NavItems>
       <NavItem label="Nodes" to="/nodes?phase=deployed" />
       <NavItem label="Factory" to="/surya" />
-      <NavItem label="Metrics" to="/metrics/overview" />
-      <NavItem label="Experiments" to="/ai/experiments" />
+      <NavItem label="Metrics" to="/metrics/accounts" />
+      {/* <NavItem label="Experiments" to="/ai/experiments" /> */}
       <NavItem
         label="Tests"
         root="/tests"
@@ -124,8 +127,11 @@ export default function App() {
                       <Route path="ai/experiments" element={<DescriptionTests />} />
 
                       <Route path="metrics" element={<Metrics />}>
-                        <Route path="overview" element={<MetricsOverview />} />
-                        <Route path="filters" element={<MetricsByFilters />} />
+                        <Route path="accounts" element={<MetricsAccounts />} />
+                        <Route path="uploads" element={<MetricsUploads />} />
+                        <Route path="apps" element={<MetricsOverview />} />
+                        <Route path="jobs" element={<MetricsJobs />} />
+                        <Route path="at-a-glance" element={<MetricsAtAGlance />} />
                       </Route>
 
 

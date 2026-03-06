@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
 
 // import * as SES from '/components/apis/ses'
 import * as BH from '/components/apis/beehive'
 import * as BK from '/components/apis/beekeeper'
 
 
-
 export type Views = 'overview' | 'filters'
 
-
-
-export default function MetricsOverview() {
+export default function MetricsApps() {
 
   const [text, setText] = useState('loading (this takes awhile)...')
 
@@ -19,7 +16,7 @@ export default function MetricsOverview() {
     async function fetchData() {
       const vsns = await BK.getNodes()
         .then(nodes => {
-          return nodes.filter(n => n.project === 'SAGE').map(n => n.vsn)
+          return nodes.filter(n => ['SAGE', 'SGT'].includes(n.project) && n.partner != 'NIREM').map(n => n.vsn)
         })
 
       const countProm = BH.getPluginCounts({
@@ -33,7 +30,11 @@ export default function MetricsOverview() {
 
         // Calculate number of unique nodes (by vsn) and total records ("value") by month
         const monthlyStats: Record<string, {
-          vsns: Set<string>, totalValue: number, vsnCounts: any, pluginCounts: any, userCounts: any
+          vsns: Set<string>,
+          totalValue: number,
+          vsnCounts: Record<string, number>,
+          pluginCounts: Record<string, number>,
+          userCounts: Record<string, number>
         }> = {}
         const yearlyStats: Record<string, { totalValue: number, vsns: Set<string> }> = {}
         const userVsns: Record<string, Set<string>> = {}
@@ -41,6 +42,7 @@ export default function MetricsOverview() {
 
         for (const rec of counts) {
           const date = new Date(rec.timestamp)
+          const value = Number(rec.value)
           const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
           const yearKey = `${date.getUTCFullYear()}`
 
@@ -54,7 +56,7 @@ export default function MetricsOverview() {
             }
           }
           monthlyStats[monthKey].vsns.add(rec.meta?.vsn)
-          monthlyStats[monthKey].totalValue += Number(rec.value)
+          monthlyStats[monthKey].totalValue += value
 
           // Yearly stats
           if (!yearlyStats[yearKey]) {
@@ -63,25 +65,21 @@ export default function MetricsOverview() {
               vsns: new Set()
             }
           }
-          yearlyStats[yearKey].totalValue += Number(rec.value)
+          yearlyStats[yearKey].totalValue += value
           yearlyStats[yearKey].vsns.add(rec.meta?.vsn)
 
           // Count per vsn
           const vsn = rec.meta?.vsn
           if (vsn) {
-            if (!monthlyStats[monthKey].vsnCounts[vsn]) {
-              monthlyStats[monthKey].vsnCounts[vsn] = 0
-            }
-            monthlyStats[monthKey].vsnCounts[vsn] += rec.value
+            monthlyStats[monthKey].vsnCounts[vsn] =
+              (monthlyStats[monthKey].vsnCounts[vsn] || 0) + value
           }
 
           // Count per plugin
           const plugin = rec.meta?.plugin
           if (plugin) {
-            if (!monthlyStats[monthKey].pluginCounts[plugin]) {
-              monthlyStats[monthKey].pluginCounts[plugin] = 0
-            }
-            monthlyStats[monthKey].pluginCounts[plugin] += rec.value
+            monthlyStats[monthKey].pluginCounts[plugin] =
+              (monthlyStats[monthKey].pluginCounts[plugin] || 0) + value
 
             // Count per user (extract user from plugin name)
             let user = ''
@@ -93,10 +91,8 @@ export default function MetricsOverview() {
               const parts = plugin.split('/')
               user = parts[0]
             }
-            if (!monthlyStats[monthKey].userCounts[user]) {
-              monthlyStats[monthKey].userCounts[user] = 0
-            }
-            monthlyStats[monthKey].userCounts[user] += rec.value
+            monthlyStats[monthKey].userCounts[user] =
+              (monthlyStats[monthKey].userCounts[user] || 0) + value
 
             // Track vsns used by each user
             if (!userVsns[user]) {
@@ -110,7 +106,7 @@ export default function MetricsOverview() {
             if (!userRecordCounts[user]) {
               userRecordCounts[user] = 0
             }
-            userRecordCounts[user] += Number(rec.value)
+            userRecordCounts[user] += value
           }
         }
 
@@ -242,6 +238,53 @@ export default function MetricsOverview() {
 }
 
 
-const Root = styled.div`
+const Root = styled('div')`
+  max-width: 1400px;
+  margin: 1rem auto;
+  padding: 0 2rem 2rem 2rem;
+
+  h2 {
+    font-size: 2rem;
+    margin: 0 0 1.5rem 0;
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+
+  pre {
+    background: ${({ theme }) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5'};
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid ${({ theme }) => theme.palette.divider};
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0 1rem 1rem 1rem;
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    pre {
+      padding: 1rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 0 0.5rem 0.5rem 0.5rem;
+    margin: 0.5rem auto;
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    pre {
+      padding: 0.75rem;
+      font-size: 0.75rem;
+    }
+  }
 `
 

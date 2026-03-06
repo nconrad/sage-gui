@@ -6,6 +6,11 @@ dist/
 coverage/
 .DS_Store
 
+# environment files
+.env
+.env.*
+!.env.example
+
 # test keys and extra precautions
 beekeeper-keys/
 *.log
