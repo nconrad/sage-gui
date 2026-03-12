@@ -1,7 +1,7 @@
 import config from '/config'
 import settings from '/components/settings'
 
-import { keyBy, uniq } from 'lodash'
+import { groupBy, keyBy, uniq } from 'lodash'
 import { handleErrors, handleDjangoErrors } from '../fetch-utils'
 import { NodeStatus } from './node'
 import parseAddress from 'parse-address/address'
@@ -9,7 +9,7 @@ import USStates from './us-states'
 import { getCarrierName } from './carrier-codes'
 
 import Auth from '../auth/auth'
-import { AccessPerm, listMyProjects, Project } from './user'
+import { AccessPerm, listMyProjects } from './user'
 
 const PROJECT = settings.project
 
@@ -178,6 +178,46 @@ export async function getBKState(id: string) : Promise<BKState> {
   const data = await get(`${API_URL}/state/${id}`)
   return data.data
 }
+
+
+export type Project = {
+  name: string
+  nodes: {
+    vsn: VSN
+    project: Node['project']
+  }[]
+  member_count: number
+}
+
+
+export async function listUserProjects() : Promise<Project[]> {
+  const data = await get(`${config.auth}/projects/`, options)
+
+  return data
+}
+
+
+
+type GroupedByProject = {
+  name: Node['project']
+  nodes: Node[]
+}
+
+export async function listNodeProjects() : Promise<GroupedByProject[]> {
+  const data = await getNodes()
+
+  // group nodes by project
+  const grouped = groupBy(data, 'project') as Record<Node['project'], Node[]>
+
+  // convert to array of {name, nodes}
+  const projects: GroupedByProject[] = Object.entries(grouped).map(([name, nodes]) => ({
+    name: name as Node['project'],
+    nodes
+  }))
+
+  return projects
+}
+
 
 export type NodeDict = {[vsn: VSN]: Node}
 
@@ -430,7 +470,7 @@ export function findHostWithSerial(hosts: string[], serial_no: string) : string 
 
 
 type GetNodeArgs = {
-  project?: Node['project']
+  project?: Node['project'] | Node['project'][]
   vsns?: VSN[]
 }
 
@@ -522,8 +562,10 @@ async function _getNodeMetas(args: GetNodeArgs) : Promise<Node[]>{
 
   let url = `${config.auth}/api/v-beta/nodes/`
 
-  if (project)
-    url += `?project__name=${project}`
+  if (project) {
+    const projectNames = Array.isArray(project) ? project.join(',') : project
+    url += `?project__name=${projectNames}`
+  }
 
   let meta = await getDjangoData(url)
 

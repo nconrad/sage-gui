@@ -8,8 +8,8 @@ import {
 import { Button, ButtonGroup, Tooltip } from '@mui/material'
 
 import { SensorIcons } from '/components/views/nodes/nodeFormatters'
+import { accessFormatter } from '/components/views/nodes/nodeFormatters'
 import { capabilityIcons } from '/components/views/sensor/capabilityIcons'
-import { CapabilityIconContainer, DisabledOverlay } from '/components/views/sensor/CapabilityIcon'
 import Table from '/components/table/Table'
 import { queryData } from '/components/data/queryData'
 import MapGL from '/components/Map'
@@ -44,34 +44,7 @@ const nodeColumns = [{
 }, {
   id: 'access',
   label: 'Access',
-  format: (access: User.AccessPerm[] = []) => {
-    const hasFiles = access.includes('files')
-    const hasDevelop = access.includes('develop')
-    const hasSchedule = access.includes('schedule')
-
-    return (
-      <AccessIconsContainer>
-        <Tooltip title="File (image, audio, etc.) Access" placement="top" arrow>
-          <CapabilityIconContainer available={hasFiles}>
-            <FilePresentOutlined />
-            {!hasFiles && <DisabledOverlay />}
-          </CapabilityIconContainer>
-        </Tooltip>
-        <Tooltip title="Develop / ssh Remote Access" placement="top" arrow>
-          <CapabilityIconContainer available={hasDevelop}>
-            <TerminalOutlined />
-            {!hasDevelop && <DisabledOverlay />}
-          </CapabilityIconContainer>
-        </Tooltip>
-        <Tooltip title="Job Scheduling Access" placement="top" arrow>
-          <CapabilityIconContainer available={hasSchedule}>
-            <ViewTimelineOutlined />
-            {!hasSchedule && <DisabledOverlay />}
-          </CapabilityIconContainer>
-        </Tooltip>
-      </AccessIconsContainer>
-    )
-  }
+  format: accessFormatter
 }]
 
 
@@ -566,12 +539,6 @@ const EmptyIcon = styled('div')`
     font-size: 4em;
     opacity: 0.3;
   }
-`
-
-const AccessIconsContainer = styled('div')`
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
 `
 
 const CapabilityFilterInline = styled('div')`

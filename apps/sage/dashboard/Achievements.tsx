@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Skeleton, styled } from '@mui/material'
+import { Skeleton, styled, Popper, Fade } from '@mui/material'
 import { TrendingUpRounded } from '@mui/icons-material'
-import { Tooltip } from '@mui/material'
 
 
 type Achievement = {
@@ -141,6 +140,8 @@ export default function Achievements({
   ]
 
   const [showAllAchievements, setShowAllAchievements] = useState(false)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [hoveredAchievement, setHoveredAchievement] = useState<Achievement | null>(null)
 
   // Filter achievements based on toggle
   const highestByCategory = Object.values(
@@ -163,6 +164,18 @@ export default function Achievements({
     : highestByCategory
 
   const earnedCount = loading ? 0 : allAchievements.filter(a => a.earned).length
+
+  const handleBadgeEnter = (event: React.MouseEvent<HTMLElement>, achievement: Achievement) => {
+    setAnchorEl(event.currentTarget)
+    setHoveredAchievement(achievement)
+  }
+
+  const handleBadgeLeave = () => {
+    setAnchorEl(null)
+    setHoveredAchievement(null)
+  }
+
+  const popperOpen = !!anchorEl && !!hoveredAchievement
 
   return (
     <AchievementsCard>
@@ -188,60 +201,72 @@ export default function Achievements({
               <BadgeIcon>
                 <Skeleton variant="circular" width={44} height={44} />
               </BadgeIcon>
-              <BadgeName>
-                <Skeleton width={90} />
-              </BadgeName>
-              <BadgeProgress>
-                <Skeleton width={60} />
-              </BadgeProgress>
             </Badge>
           ))
         ) : (
           displayedAchievements.map(achievement => (
-            <Tooltip key={achievement.id} title={achievement.description} placement="top" arrow>
-              <Badge earned={achievement.earned} showAll={showAllAchievements}>
-                <BadgeIcon>{achievement.icon}</BadgeIcon>
-                <BadgeName>{achievement.name}</BadgeName>
-                <BadgeProgress>
-                  {`${achievement.progress}/${achievement.target}`}
-                </BadgeProgress>
-              </Badge>
-            </Tooltip>
+            <Badge
+              key={achievement.id}
+              earned={achievement.earned}
+              showAll={showAllAchievements}
+              onMouseEnter={(event) => handleBadgeEnter(event, achievement)}
+              onMouseLeave={handleBadgeLeave}
+            >
+              <BadgeIcon>{achievement.icon}</BadgeIcon>
+            </Badge>
           ))
         )}
       </BadgesGrid>
+
+      <Popper open={popperOpen} anchorEl={anchorEl} placement="top" transition>
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={150}>
+            <HoverPopper>
+              {hoveredAchievement && (
+                <>
+                  <HoverHeader>
+                    <HoverIcon>{hoveredAchievement.icon}</HoverIcon>
+                    <HoverTitle>{hoveredAchievement.name}</HoverTitle>
+                  </HoverHeader>
+                  <HoverDescription>{hoveredAchievement.description}</HoverDescription>
+                  <HoverMeta>
+                    <HoverProgress>{`${hoveredAchievement.progress}/${hoveredAchievement.target}`}</HoverProgress>
+                    <HoverStatus earned={hoveredAchievement.earned}>
+                      {hoveredAchievement.earned ? 'Earned' : 'In progress'}
+                    </HoverStatus>
+                  </HoverMeta>
+                </>
+              )}
+            </HoverPopper>
+          </Fade>
+        )}
+      </Popper>
     </AchievementsCard>
   )
 }
 
 
 const AchievementsCard = styled('div')`
-  min-width: 450px;
-  max-width: 450px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-
-  @media (max-width: 1200px) {
-    min-width: 100%;
-    max-width: 100%;
-  }
 `
 
 const AchievementsHeader = styled('div')`
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.35rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
 `
 
 const ToggleButton = styled('button')`
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.65rem;
   background: transparent;
   border: 1.5px solid ${({ theme }) => theme.palette.primary.main};
   border-radius: 6px;
   color: ${({ theme }) => theme.palette.primary.main};
   font-weight: 600;
-  font-size: 0.75em;
+  font-size: 0.7em;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -263,7 +288,7 @@ const AchievementsTitle = styled('h3')`
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -277,8 +302,8 @@ const AchievementsTitle = styled('h3')`
 
 const BadgesGrid = styled('div')`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
+  gap: 0.18rem;
 `
 
 const Badge = styled('div')<{ earned: boolean; showAll: boolean }>`
@@ -297,15 +322,14 @@ const Badge = styled('div')<{ earned: boolean; showAll: boolean }>`
       : 'none'
 };
   border-radius: 12px;
-  padding: 1rem 0.75rem;
+  padding: 0.3rem;
   text-align: center;
   transition: all 0.2s ease;
   opacity: ${({ earned, showAll }) => (showAll && !earned) ? 0.5 : 1};
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 0.4rem;
+  min-height: 46px;
   cursor: pointer;
 
   &:hover {
@@ -323,19 +347,65 @@ const Badge = styled('div')<{ earned: boolean; showAll: boolean }>`
 `
 
 const BadgeIcon = styled('div')`
-  font-size: 3em;
+  font-size: 2em;
   line-height: 1;
 `
 
-const BadgeName = styled('div')`
-  font-weight: 600;
-  font-size: 0.85em;
-  color: ${({ theme }) => theme.palette.mode === 'dark' ? '#fff' : '#333'};
-  line-height: 1.2;
+const HoverPopper = styled('div')`
+  max-width: 280px;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.palette.divider};
+  background: ${({ theme }) => theme.palette.background.paper};
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
 `
 
-const BadgeProgress = styled('div')`
-  font-size: 0.8em;
+const HoverHeader = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+`
+
+const HoverIcon = styled('span')`
+  font-size: 1.2rem;
+  line-height: 1;
+`
+
+const HoverTitle = styled('div')`
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.palette.text.primary};
+`
+
+const HoverDescription = styled('div')`
+  font-size: 0.78rem;
+  color: ${({ theme }) => theme.palette.text.secondary};
+  line-height: 1.35;
+  margin-bottom: 0.5rem;
+`
+
+const HoverMeta = styled('div')`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+`
+
+const HoverProgress = styled('span')`
+  font-size: 0.76rem;
   font-weight: 700;
   color: ${({ theme }) => theme.palette.primary.main};
+`
+
+const HoverStatus = styled('span')<{ earned: boolean }>`
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  color: ${({ theme, earned }) => earned ? theme.palette.success.dark : theme.palette.text.secondary};
+  background: ${({ theme, earned }) => earned
+    ? (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(76, 175, 80, 0.15)')
+    : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)')};
 `

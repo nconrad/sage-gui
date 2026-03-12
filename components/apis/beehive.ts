@@ -622,6 +622,42 @@ export async function getMediaCounts(props: MediaCountProps) : Promise<Record[]>
 }
 
 
+type UploadHourlyCountProps = {
+  start?: string | Date,
+  end?: string | Date,
+  vsn?: string,
+}
+
+export type UploadHourlyCount = {
+  timestamp: string
+  value: number
+  name: 'upload_hourly_count'
+  meta: {
+    vsn: string
+    plugin: string
+  }
+  // sensor: 'unknown'  <-- unused
+}
+
+export async function getUploadHourlyCounts(props: UploadHourlyCountProps = {}) : Promise<UploadHourlyCount[]> {
+  const {start, end, vsn} = props
+
+  const params = {
+    bucket: 'upload-stats',
+    start: start || '2025-01-01T00:00:00Z',
+    ...(end && {end}),
+    filter: {
+      name: 'upload_hourly_count',
+      ...(vsn && {vsn}),
+    },
+
+  }
+
+  const data = await getData(params)
+  return data
+}
+
+
 async function getRssis(vsn: string, devEuis: string | string[]) : Promise<{[devEui: string]: Record}> {
   const devEui = Array.isArray(devEuis) ? devEuis.join('|') : devEuis
   const params = {start: NODE_STATUS_RANGE, filter: {name: 'signal.rssi', vsn, devEui}, tail: 1}
@@ -704,4 +740,6 @@ export async function retryHead(
   }
   return latest
 }
+
+
 

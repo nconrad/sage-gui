@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
 import { WorkOutline, HubOutlined, GroupOutlined } from '@mui/icons-material'
 import { useProgress } from '/components/progress/ProgressProvider'
+import MetricStatCard from '/components/layout/MetricStatCard'
 
 import Table from '/components/table/Table'
 import * as User from '/components/apis/user'
@@ -16,16 +17,22 @@ const { contactUs } = config
 const columns = [{
   id: 'name',
   label: 'Project Name',
-  format: (name) => <b>{name}</b>
+  format: (name) =>
+    <Link to={`/user/${Auth.user}/teams/${encodeURIComponent(name)}`}>
+      <b>{name}</b>
+    </Link>
 }, {
   id: 'nodes',
   label: 'Nodes',
-  format: (nodes) => nodes.length
+  format: (nodes, obj) =>
+    <Link to={`/user/${Auth.user}/nodes?show_all=true&project=${encodeURIComponent(obj.name)}`}>
+      {nodes.length}
+    </Link>
 }, {
   id: 'members',
   label: 'Team Members',
   format: (members, obj) =>
-    <Link to={`/user/${Auth.user}/teams/${obj.name}`}>
+    <Link to={`/user/${Auth.user}/teams/${encodeURIComponent(obj.name)}`}>
       {members.length} {members.length === 1 ? 'member' : 'members'}
     </Link>
 }]
@@ -34,7 +41,7 @@ const columns = [{
 export default function MyProjects() {
   const {setLoading} = useProgress()
 
-  const [data, setData] = useState<User.Project[]>()
+  const [data, setData] = useState<User.MyProject[]>()
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -59,27 +66,21 @@ export default function MyProjects() {
       {data &&
         <>
           <StatsContainer>
-            <StatCard>
-              <StatIcon><WorkOutline /></StatIcon>
-              <StatContent>
-                <StatValue>{data.length}</StatValue>
-                <StatLabel>Project{data.length !== 1 ? 's' : ''}</StatLabel>
-              </StatContent>
-            </StatCard>
-            <StatCard>
-              <StatIcon><HubOutlined /></StatIcon>
-              <StatContent>
-                <StatValue>{uniqueNodes}</StatValue>
-                <StatLabel>Unique node{uniqueNodes !== 1 ? 's' : ''}</StatLabel>
-              </StatContent>
-            </StatCard>
-            <StatCard>
-              <StatIcon><GroupOutlined /></StatIcon>
-              <StatContent>
-                <StatValue>{uniqueMembers}</StatValue>
-                <StatLabel>Team member{uniqueMembers !== 1 ? 's' : ''}</StatLabel>
-              </StatContent>
-            </StatCard>
+            <MetricStatCard
+              icon={<WorkOutline />}
+              value={data.length}
+              label={`Project${data.length !== 1 ? 's' : ''}`}
+            />
+            <MetricStatCard
+              icon={<HubOutlined />}
+              value={uniqueNodes}
+              label={`Unique node${uniqueNodes !== 1 ? 's' : ''}`}
+            />
+            <MetricStatCard
+              icon={<GroupOutlined />}
+              value={uniqueMembers}
+              label={`Team member${uniqueMembers !== 1 ? 's' : ''}`}
+            />
           </StatsContainer>
 
           <Table
@@ -111,48 +112,8 @@ const StatsContainer = styled('div')`
   display: flex;
   gap: 20px;
   margin-bottom: 30px;
-`
 
-const StatCard = styled('div')`
-  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa'};
-  border: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#444' : '#e0e0e0'};
-  border-radius: 8px;
-  padding: 24px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.2s ease;
-
-  /*
-  &:hover {
-    border-color: ${({ theme }) => theme.palette.primary.main};
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  > * {
+    flex: 1;
   }
-  */
-`
-
-const StatIcon = styled('div')`
-  svg {
-    font-size: 4em;
-    color: ${({ theme }) => theme.palette.primary.main};
-  }
-`
-
-const StatContent = styled('div')`
-  flex: 1;
-`
-
-const StatValue = styled('div')`
-  font-size: 2em;
-  font-weight: bold;
-  color: ${({ theme }) => theme.palette.mode === 'dark' ? '#fff' : '#333'};
-  line-height: 1;
-  margin-bottom: 4px;
-`
-
-const StatLabel = styled('div')`
-  font-size: 0.875em;
-  color: ${({ theme }) => theme.palette.mode === 'dark' ? '#999' : '#666'};
-  font-weight: 500;
 `

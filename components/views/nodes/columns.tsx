@@ -4,9 +4,10 @@ import * as formatters from '/components/views/nodes/nodeFormatters'
 import type { Column } from '/components/table/Table'
 import type { Node } from '/components/apis/beekeeper'
 
+export { accessFormatter } from '/components/views/nodes/nodeFormatters'
+
 
 const PROJECT = settings.project?.toLowerCase()
-
 
 const columns: Column<Node>[] = [{
   id: 'status',

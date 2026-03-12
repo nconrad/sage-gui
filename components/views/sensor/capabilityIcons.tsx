@@ -28,8 +28,7 @@ export const capabilityIcons = {
   Chemical: ScienceOutlined,
   Accelerometer: Level,
   lorawan: RouterOutlined,
-  'Additional Sensors/Capabilities': MoreOutlined,
-  'Thermal Camera': CameraAltOutlined
+  'Additional Sensors/Capabilities': MoreOutlined
 }
 
 /**

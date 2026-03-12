@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { styled } from '@mui/material'
-import { useSearchParams, useLocation, Link, useParams } from 'react-router-dom'
+import { useSearchParams, useLocation, Link, useParams, useNavigate } from 'react-router-dom'
 
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
@@ -12,7 +12,7 @@ import UndoIcon from '@mui/icons-material/UndoRounded'
 
 import { uniqBy } from 'lodash'
 
-import columns from './columns'
+import columns, { accessFormatter } from './columns'
 import {
   filterData,
   getFilterState,
@@ -36,6 +36,7 @@ import Auth from '/components/auth/auth'
 import settings from '/components/settings'
 import Checkbox from '/components/input/Checkbox'
 import { vsnLinkWithEdit } from './nodeFormatters'
+import SageProjectFilter from '/apps/sage/dashboard/SageProjectFilter'
 
 
 const TIME_OUT = 5000
@@ -82,6 +83,7 @@ export default function Nodes() {
   const { sageProject } = useParams()
   const [params, setParams] = useSearchParams()
   const {pathname} = useLocation()
+  const navigate = useNavigate()
   const {isSuper} = useIsSuper()
 
   // Derived state from URL/pathname
@@ -94,6 +96,27 @@ export default function Nodes() {
   const query = params.get('query') || ''
   const show_all = params.get('show_all') === 'true'
 
+  // Derive SAGE/SGT project filter from URL param
+  const projectFilter = useMemo((): 'all' | 'SAGE' | 'SGT' => {
+    if (!sageProject) return 'all'
+    const upper = sageProject.toUpperCase()
+    if (upper === 'SGT') return 'SGT'
+    if (upper === 'SAGE') return 'SAGE'
+    return 'all'
+  }, [sageProject])
+
+  const projectBasePath = useMemo(() => {
+    if (isMyNodes) return `/user/${Auth.user}/nodes/project`
+    if (all_nodes) return '/nodes/all'
+    return '/nodes/project'
+  }, [isMyNodes, all_nodes])
+
+  const handleProjectFilterChange = useCallback((value: 'all' | 'SAGE' | 'SGT') => {
+    const suffix = value === 'all' ? '' : `/${value.toLowerCase()}`
+    const paramStr = params.toString()
+    navigate(`${projectBasePath}${suffix}${paramStr ? '?' + paramStr : ''}`)
+  }, [navigate, projectBasePath, params])
+
   // Data state
   const { setLoading } = useProgress()
   const [data, setData] = useState<ReturnType<typeof mergeMetrics>>(null)
@@ -102,10 +125,12 @@ export default function Nodes() {
   const [lastUpdate, setLastUpdate] = useState<Date>(null)
   const [selected, setSelected] = useState<BK.NodeState[]>([])
 
-  // MyNodes-specific state
+  // User project/access data (for all signed-in users)
   const [userVsns, setUserVsns] = useState<string[]>(null)
+  const [userAccessMap, setUserAccessMap] = useState<Record<string, User.AccessPerm[]>>(null)
   const [vsnToProjectsMap, setVsnToProjectsMap] = useState<Map<string, string>>(null)
-  const [userProjectsList, setUserProjectsList] = useState<User.Project[]>(null)
+  const [userProjectsList, setUserProjectsList] = useState<User.MyProject[]>(null)
+  const [userDataReady, setUserDataReady] = useState(false)
   const [myNodesReady, setMyNodesReady] = useState(false)
 
   // Filter state
@@ -136,13 +161,32 @@ export default function Nodes() {
   dataRef.current = data
 
 
-  // Load user projects data for MyNodes view
+  // Fetch user project and access data for all signed-in users
+  useEffect(() => {
+    if (!Auth.isSignedIn) return
+
+    User.listMyProjects().then(({vsns, projects, access}) => {
+      setUserProjectsList(projects)
+      setUserVsns(vsns)
+      setUserAccessMap(access || {})
+
+      // Create VSN to projects mapping
+      const vsnProjectMap = new Map<string, string>()
+      projects.forEach(project => {
+        project.nodes.forEach(node => {
+          const existing = vsnProjectMap.get(node.vsn)
+          vsnProjectMap.set(node.vsn, existing ? `${existing}, ${project.name}` : project.name)
+        })
+      })
+      setVsnToProjectsMap(vsnProjectMap)
+      setUserDataReady(true)
+    })
+  }, [])
+
+  // isMyNodes-specific: default show_all param and gate node loading until user data ready
   useEffect(() => {
     if (!isMyNodes) {
       setMyNodesReady(false)
-      setUserVsns(null)
-      setVsnToProjectsMap(null)
-      setUserProjectsList(null)
       return
     }
 
@@ -156,32 +200,21 @@ export default function Nodes() {
       setParams(newParams, {replace: true})
     }
 
-    User.listMyProjects().then(({vsns, projects}) => {
-      setUserProjectsList(projects)
-      setUserVsns(vsns)
-
-      // Create VSN to projects mapping
-      const vsnProjectMap = new Map<string, string>()
-      projects.forEach(project => {
-        project.nodes.forEach(node => {
-          const existing = vsnProjectMap.get(node.vsn)
-          vsnProjectMap.set(node.vsn, existing ? `${existing}, ${project.name}` : project.name)
-        })
-      })
-      setVsnToProjectsMap(vsnProjectMap)
+    if (userDataReady) {
       setMyNodesReady(true)
-    })
-  }, [isMyNodes])
+    }
+  }, [isMyNodes, userDataReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // Add projects field to nodes data when in MyNodes view
+  // Enrich nodes with user project and access data when available
   const enrichWithProjects = useCallback((nodes) => {
-    if (!isMyNodes || !vsnToProjectsMap) return nodes
+    if (!vsnToProjectsMap) return nodes
     return nodes.map(node => ({
       ...node,
-      projects: vsnToProjectsMap.get(node.vsn) || ''
+      projects: vsnToProjectsMap.get(node.vsn) || '',
+      access: userAccessMap?.[node.vsn] || []
     }))
-  }, [isMyNodes, vsnToProjectsMap])
+  }, [vsnToProjectsMap, userAccessMap])
 
 
   // Load and poll node data
@@ -257,16 +290,16 @@ export default function Nodes() {
     // Apply query search
     result = queryData(result, query)
 
-    // Handle projects filter for MyNodes (comma-separated values)
-    if (isMyNodes && newFilterState.projects?.length) {
+    // Handle project filter for MyNodes (comma-separated values)
+    if (isMyNodes && newFilterState.project?.length) {
       result = result.filter(node => {
         const nodeProjects = node.projects || ''
-        return newFilterState.projects.some(projectName =>
+        return newFilterState.project.some(projectName =>
           nodeProjects.split(', ').includes(projectName)
         )
       })
-      // Remove projects from filter state so filterData doesn't process it
-      const {projects, ...remainingFilters} = newFilterState
+      // Remove project from filter state so filterData doesn't process it
+      const {project, ...remainingFilters} = newFilterState
       result = filterData(result, remainingFilters)
     } else {
       result = filterData(result, newFilterState)
@@ -289,8 +322,8 @@ export default function Nodes() {
       }
     }
 
-    // Add projects column for MyNodes view (only when data is ready)
-    if (isMyNodes && myNodesReady && vsnToProjectsMap) {
+    // Add My Project(s) and Access columns when user data is available (all signed-in users)
+    if (userDataReady && vsnToProjectsMap) {
       const vsnIdx = computedColumns.findIndex(o => o.id === 'vsn')
       const projectsCol: Column = {
         id: 'projects',
@@ -311,9 +344,16 @@ export default function Nodes() {
             </>
           )
         },
+        hide: true,
         dlFormat: (_, obj) => vsnToProjectsMap.get(obj.vsn) || ''
       }
-      computedColumns.splice(vsnIdx + 1, 0, projectsCol)
+      const accessCol: Column = {
+        id: 'access',
+        label: 'My Access',
+        format: accessFormatter,
+        hide: true
+      }
+      computedColumns.splice(vsnIdx + 1, 0, projectsCol, accessCol)
     }
 
     // Hide status column for all_nodes view
@@ -323,7 +363,7 @@ export default function Nodes() {
     }
 
     return computedColumns
-  }, [isSuper, isMyNodes, myNodesReady, vsnToProjectsMap, all_nodes])
+  }, [isSuper, userDataReady, vsnToProjectsMap, all_nodes])
 
 
   // Update map when selection changes
@@ -479,11 +519,21 @@ export default function Nodes() {
             }
             middleComponent={
               <FilterControls className="flex items-center">
+
+                {data &&
+                  <SageProjectFilter
+                    projectFilter={projectFilter}
+                    onProjectFilterChange={handleProjectFilterChange}
+                    sgtNodesCount={!sageProject ? data.filter(node => node.project === 'SGT').length : null}
+                    sageNodesCount={!sageProject ? data.filter(node => node.project === 'SAGE').length : null}
+                  />
+                }
+
                 {filterOptions.projects && isMyNodes &&
                   <FilterMenu
                     label="Project"
                     options={filterOptions.projects}
-                    value={filterState.projects}
+                    value={filterState.project}
                     onChange={vals => handleFilterChange('project', vals as Option[])}
                     noSelectedSort
                   />

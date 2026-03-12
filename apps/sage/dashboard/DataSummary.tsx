@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
-import { Sort, ViewTimelineOutlined } from '@mui/icons-material'
-import { Button, ButtonGroup, Autocomplete, TextField, Chip, IconButton, Tooltip } from '@mui/material'
-import { SortByAlpha, Tag } from '@mui/icons-material'
+import { ViewTimelineOutlined } from '@mui/icons-material'
+import { Button, ButtonGroup } from '@mui/material'
 import { subDays, subYears } from 'date-fns'
 
 import { Card } from '/components/layout/Layout'
@@ -11,6 +10,7 @@ import Timeline from '/components/viz/Timeline'
 import TimelineSkeleton from '/components/viz/TimelineSkeleton'
 import { getRangeTitle } from '/components/utils/units'
 import DataOptions from '/components/input/DataOptions'
+import FilterAutocomplete from '/components/input/FilterAutocomplete'
 import { fetchRollup } from '/apps/sage/data/rollupUtils'
 import { processTimelineData } from './dashboardUtils'
 import { colorDensity } from '../data/Data'
@@ -44,7 +44,7 @@ export default function DataSummary({
   allJobs,
   projectFilter,
   onProjectFilterChange,
-  allNodesCount,
+  // allNodesCount,
   sageNodesCount,
   sgtNodesCount
 }: DataSummaryProps) {
@@ -288,126 +288,31 @@ export default function DataSummary({
         <TimelineContainer>
           <div>
             {timelineTab === 'nodes' && availableApps.size > 0 && (
-              <FilterChipsContainer>
-                <FilterLabel>Filter by:</FilterLabel>
-                <Autocomplete
-                  multiple
-                  size="small"
-                  options={sortedApps.map(([app]) => app)}
-                  value={selectedApps}
-                  onChange={(_, newValue) => setSelectedApps(newValue)}
-                  limitTags={5}
-                  getOptionLabel={(option) => option}
-                  renderOption={(props, option) => {
-                    const count = appCounts.get(option) || 0
-                    return (
-                      <li {...props} style={{ display: 'flex', justifyContent: 'space-between', ...props.style }}>
-                        <span>{option}</span>
-                        <span style={{ fontWeight: 600, color: '#999', marginLeft: '1rem' }}>
-                          {count.toLocaleString()}
-                        </span>
-                      </li>
-                    )
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Apps"
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            <Tooltip title={sortAppsByCount ?
-                              'Sorted by count (click for A-Z)' : 'Sorted A-Z (click for count)'}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setSortAppsByCount(!sortAppsByCount)}
-                                sx={{ mr: 0.5 }}
-                              >
-                                {sortAppsByCount ? <Sort fontSize="small" /> : <SortByAlpha fontSize="small" />}
-                              </IconButton>
-                            </Tooltip>
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        label={option}
-                        size="small"
-                        {...getTagProps({ index })}
-                        key={option}
-                      />
-                    ))
-                  }
-                  sx={{ flex: 1 }}
-                />
-              </FilterChipsContainer>
+              <FilterAutocomplete
+                options={sortedApps.map(([app]) => app)}
+                value={selectedApps}
+                onChange={(newValue) => setSelectedApps(newValue)}
+                counts={appCounts}
+                sortByCount={sortAppsByCount}
+                onSortChange={(sortByCount) => setSortAppsByCount(sortByCount)}
+                placeholder="Apps"
+                limitTags={5}
+              />
             )}
             {timelineTab === 'apps' && availableNodes.size > 0 && (
-              <FilterChipsContainer>
-                <FilterLabel>Filter by:</FilterLabel>
-                <Autocomplete
-                  multiple
-                  size="small"
-                  options={sortedNodes.map(([node]) => node)}
-                  value={selectedNodes}
-                  onChange={(_, newValue) => setSelectedNodes(newValue)}
-                  limitTags={10}
-                  getOptionLabel={(option) => option}
-                  renderOption={(props, option) => {
-                    const count = nodeCounts.get(option) || 0
-                    return (
-                      <li {...props} style={{ display: 'flex', justifyContent: 'space-between', ...props.style }}>
-                        <span>{option}</span>
-                        <span style={{ fontWeight: 600, color: '#999', marginLeft: '1rem' }}>
-                          {count.toLocaleString()}
-                        </span>
-                      </li>
-                    )
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Nodes"
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            <Tooltip title={sortNodesByCount ?
-                              'Sorted by count (click for A-Z)' : 'Sorted A-Z (click for count)'}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setSortNodesByCount(!sortNodesByCount)}
-                                sx={{ mr: 0.5 }}
-                              >
-                                {sortNodesByCount ? <Sort fontSize="small" /> : <SortByAlpha fontSize="small" />}
-                              </IconButton>
-                            </Tooltip>
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        label={option}
-                        size="small"
-                        {...getTagProps({ index })}
-                        key={option}
-                      />
-                    ))
-                  }
-                  sx={{ flex: 1 }}
-                />
-              </FilterChipsContainer>
+              <FilterAutocomplete
+                options={sortedNodes.map(([node]) => node)}
+                value={selectedNodes}
+                onChange={(newValue) => setSelectedNodes(newValue)}
+                counts={nodeCounts}
+                sortByCount={sortNodesByCount}
+                onSortChange={(sortByCount) => setSortNodesByCount(sortByCount)}
+                placeholder="Nodes"
+                limitTags={10}
+              />
             )}
           </div>
+          <br/>
           <div className="timeline-title flex items-start gap">
             <h2>{getRangeTitle(opts.window)}</h2>
             <DataOptions
@@ -508,7 +413,7 @@ export default function DataSummary({
           <SageProjectFilter
             projectFilter={projectFilter}
             onProjectFilterChange={onProjectFilterChange}
-            allNodesCount={allNodesCount}
+            // allNodesCount={allNodesCount}
             sageNodesCount={sageNodesCount}
             sgtNodesCount={sgtNodesCount}
           />
@@ -596,11 +501,6 @@ const FilterGroup = styled('div')`
   flex-wrap: wrap;
 `
 
-const FilterLabel = styled('span')`
-  font-weight: 600;
-  color: ${({ theme }) => theme.palette.mode === 'dark' ? '#fff' : '#333'};
-`
-
 const TimelineContainer = styled('div')`
   overflow-x: auto;
 
@@ -635,19 +535,5 @@ const EmptyIcon = styled('div')`
   svg {
     font-size: 4em;
     opacity: 0.3;
-  }
-`
-
-const FilterChipsContainer = styled('div')`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5'};
-  border-radius: 8px;
-  .MuiInputBase-root {
-    background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#fff'};
   }
 `

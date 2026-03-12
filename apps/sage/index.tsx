@@ -223,6 +223,7 @@ export default function Sage() {
                         <Route path="nodes/all" element={<Nodes />} />
                         <Route path="nodes/all/:sageProject?" element={<Nodes />} />
                         <Route path="nodes/project/:sageProject?" element={<Nodes />} />
+                        <Route path="nodes/:vsn" element={<Node />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
 
                         <Route path="user/:user/dash" element={<RequireAuth><Dashboard /></RequireAuth>} />
@@ -238,7 +239,6 @@ export default function Sage() {
 
                       <Route path="sensors/:name" element={<Sensor />} />
 
-                      <Route path="nodes/:vsn" element={<Node />} />
 
                       <Route path="/apps" element={<Navigate to="/apps/explore" replace />} />
                       <Route path="apps" element={<Apps />}>
@@ -269,7 +269,7 @@ export default function Sage() {
                         <Route path="access" element={<RequireAuth><DevAccess /></RequireAuth>} />
                       </Route>
 
-                      <Route path="request-allocation" element={<RequireAuth><AllocationRequest /></RequireAuth>} />
+                      <Route path="request-access" element={<RequireAuth><AllocationRequest /></RequireAuth>} />
 
                       <Route path="assistant" element={<Assistant />} />
 

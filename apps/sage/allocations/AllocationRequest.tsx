@@ -12,8 +12,8 @@ import Checkbox from '/components/input/Checkbox'
 import { Step, StepTitle } from '/components/layout/FormLayout'
 
 import Table from '/components/table/Table'
-import { getAllocationFormData, UserInfo } from '/components/apis/user'
-
+import { UserInfo } from '/components/apis/user'
+import { listUserProjects, type Project } from '/components/apis/beekeeper'
 import { getUserInfo } from '/components/apis/user'
 import { getNodes } from '/components/apis/beekeeper'
 import MapGL from '/components/Map'
@@ -129,7 +129,7 @@ export default function ProjectForm() {
   const [draggedOverIndex, setDraggedOverIndex] = useState<number | null>(null)
 
   const [reqType, setReqType] = useState<AllocationType>(null)
-  const [formSpec, setFormSpec] = useState()
+  const [formSpec, setFormSpec] = useState<{projects: Project[]}>()
 
   const [nodes, setNodes] = useState<any[]>([])
 
@@ -137,10 +137,10 @@ export default function ProjectForm() {
   const [user, setUser] = useState<UserInfo>()
 
   useEffect(() => {
-    getAllocationFormData()
+    listUserProjects()
       .then(data => {
         console.log(data)
-        setFormSpec(data)
+        setFormSpec({ projects: data })
       })
       .catch(err => {
         // todo
@@ -306,7 +306,8 @@ export default function ProjectForm() {
                           }}
                         >
                           <span>
-                            {option.vsn + (option.site_id ? '| ' + option.site_id : '') || option.node || String(option)}
+                            {option.vsn + (option.site_id ? '| ' +
+                              option.site_id : '') || option.node || String(option)}
                           </span>
                           {(option.city || option.state) && (
                             <span
@@ -364,11 +365,12 @@ export default function ProjectForm() {
                       multiple
                       loading={!formSpec?.projects}
                       options={formSpec.projects || []}
-                      getOptionLabel={option =>
-                        option.name
-                          ? `${option.name} (${pluralize(option.number_of_users || 0, 'user', 'users')}, ${pluralize(option.number_of_nodes || 0, 'node', 'nodes')})`
-                          : String(option)
-                      }
+                      getOptionLabel={option => {
+                        if (!option.name) return String(option)
+                        const users = pluralize(option.number_of_users || 0, 'user', 'users')
+                        const nodes = pluralize(option.number_of_nodes || 0, 'node', 'nodes')
+                        return `${option.name} (${users}, ${nodes})`
+                      }}
                       value={formData.selected_projects}
                       onChange={(_, newValue) => {
                         console.log('newValue', newValue)
@@ -381,10 +383,18 @@ export default function ProjectForm() {
                         }))
                       }}
                       renderOption={(props, option) => (
-                        <li {...props} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <li
+                          {...props}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        >
                           <span>{option.name}</span>
-                          <span style={{ color: '#aaa', fontSize: '0.95em', marginLeft: 12, marginRight: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                            {pluralize(option.number_of_users || 0, 'user', 'users')}, {pluralize(option.number_of_nodes || 0, 'node', 'nodes')}
+                          <span style={{
+                            color: '#aaa', fontSize: '0.95em',
+                            marginLeft: 12, marginRight: 4,
+                            flexShrink: 0, whiteSpace: 'nowrap'
+                          }}>
+                            {pluralize(option.number_of_users || 0, 'user', 'users')},{' '}
+                            {pluralize(option.number_of_nodes || 0, 'node', 'nodes')}
                           </span>
                         </li>
                       )}
@@ -403,15 +413,18 @@ export default function ProjectForm() {
                     </Typography>
                     <div className="flex column gap">
                       <FormControlLabel
-                        control={<Checkbox name="running_apps" checked={formData.running_apps} onChange={handle_checkbox_change} />}
+                        control={<Checkbox name="running_apps" checked={formData.running_apps}
+                          onChange={handle_checkbox_change} />}
                         label="Running apps (Includes SageChat/LLMS)"
                       />
                       <FormControlLabel
-                        control={<Checkbox name="shell_access" checked={formData.shell_access} onChange={handle_checkbox_change} />}
+                        control={<Checkbox name="shell_access" checked={formData.shell_access}
+                          onChange={handle_checkbox_change} />}
                         label="Shell (SSH Access)"
                       />
                       <FormControlLabel
-                        control={<Checkbox name="data_download" checked={formData.data_download} onChange={handle_checkbox_change} />}
+                        control={<Checkbox name="data_download" checked={formData.data_download}
+                          onChange={handle_checkbox_change} />}
                         label="Downloading protected data sets (files)"
                       />
                     </div>

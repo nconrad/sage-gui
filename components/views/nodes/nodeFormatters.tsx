@@ -3,6 +3,11 @@ import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
 import { IconButton, Badge, Tooltip, Popper, ClickAwayListener, List, ListItem, ListItemText } from '@mui/material'
+import {
+  FilePresentOutlined,
+  TerminalOutlined,
+  ViewTimelineOutlined
+} from '@mui/icons-material'
 
 import {
   CheckRounded, CheckCircleRounded, ReportProblemOutlined,
@@ -14,9 +19,11 @@ import { NODE_STATUS_RANGE } from '/components/apis/beehive'
 import NodeLastReported from '/components/utils/NodeLastReported'
 import Dot from '/components/utils/Dot'
 import { capabilityIcons } from '../sensor/capabilityIcons'
+import { CapabilityIconContainer, DisabledOverlay } from '../sensor/CapabilityIcon'
 
 import * as utils from '/components/utils/units'
 import * as BK from '/components/apis/beekeeper'
+import type { AccessPerm } from '/components/apis/user'
 import config from '/config'
 import { Box } from '@mui/material'
 
@@ -479,7 +486,7 @@ export function vsnLink(vsn, node: BK.Node) {
 
 export function vsnLinkWithEdit(vsn, node: BK.Node) {
   const {site_id} = node
-  return <div className="flex items-center">
+  return <div className="flex items-center no-wrap">
     <Link to={`/nodes/${vsn}`}>
       {site_id || vsn} <small className="muted">{site_id && `${vsn}` }</small>
     </Link>
@@ -521,10 +528,12 @@ export function vsnToDisplayStrAlt(vsn, site_id) {
   return `${site_id || vsn}${site_id ? ` (${vsn})` : ''}`
 }
 
+
 export function focus(focus, {partner}) {
   return (!focus && !partner) ? '-' :
     `${focus ? focus : ''}${partner ? ` (${partner})` : ''}`
 }
+
 
 export function gps(_, obj, newline = false) {
   return <div className="flex items-center">
@@ -536,7 +545,6 @@ export function gps(_, obj, newline = false) {
     }
   </div>
 }
-
 
 
 export function lastUpdated(elapsedTimes, obj) {
@@ -572,6 +580,7 @@ export function modem(_, obj) {
   )
 }
 
+
 // details on a sim card for a node
 export function modemSim(_, obj: BK.Node) {
   return (
@@ -584,6 +593,7 @@ export function modemSim(_, obj: BK.Node) {
     </>
   )
 }
+
 
 type SensorsProps = {
   data: BK.Node['sensors'] | BK.Node['computes']
@@ -621,7 +631,6 @@ export function HardwareListSimple(props: SensorsProps) {
 }
 
 
-
 const HardwareRoot = styled.ul`
   padding: 0;
   font-size: 9pt;
@@ -643,7 +652,6 @@ const capabilityAbbrev = {
   'Solar Radiation': 'Solar',
   'Microphone': 'Mic'
 }
-
 
 export function HardwareList(props: SensorsProps) {
   const {data, path} = props
@@ -718,7 +726,6 @@ export function bottomSensors(v, obj) {
 }
 
 
-
 export function leftSensors(v, obj) {
   const {sensors} = obj
   const sens = sensors.filter(({name}) => name?.match(/left/gi))
@@ -733,7 +740,6 @@ export function leftSensors(v, obj) {
     )}
   </HardwareRoot>
 }
-
 
 
 export function rightSensors(v, obj) {
@@ -754,7 +760,6 @@ export function rightSensors(v, obj) {
 }
 
 
-
 export function additionalSensors(v, obj) {
   const {sensors} = obj
   const sens = sensors.filter(({name}) =>
@@ -770,5 +775,35 @@ export function additionalSensors(v, obj) {
       </li>
     )}
   </HardwareRoot>
+}
+
+
+export function accessFormatter(access: AccessPerm[] = []) {
+  const hasFiles = access.includes('files')
+  const hasDevelop = access.includes('develop')
+  const hasSchedule = access.includes('schedule')
+
+  return (
+    <div className="flex items-center gap">
+      <Tooltip title="File (image, audio, etc.) Access" placement="top" arrow>
+        <CapabilityIconContainer available={hasFiles}>
+          <FilePresentOutlined />
+          {!hasFiles && <DisabledOverlay />}
+        </CapabilityIconContainer>
+      </Tooltip>
+      <Tooltip title="Develop / ssh Remote Access" placement="top" arrow>
+        <CapabilityIconContainer available={hasDevelop}>
+          <TerminalOutlined />
+          {!hasDevelop && <DisabledOverlay />}
+        </CapabilityIconContainer>
+      </Tooltip>
+      <Tooltip title="Job Scheduling Access" placement="top" arrow>
+        <CapabilityIconContainer available={hasSchedule}>
+          <ViewTimelineOutlined />
+          {!hasSchedule && <DisabledOverlay />}
+        </CapabilityIconContainer>
+      </Tooltip>
+    </div>
+  )
 }
 

@@ -1,4 +1,6 @@
-
+// keys to be kept in localStorage, all other keys will be removed on load.
+// the goal currently is to prevent stale data from old versions
+// of the app while keeping localStorage clean.
 const keys = [
   'sage_username',
   'sage-table-columns-/nodes',
@@ -9,7 +11,11 @@ const keys = [
   'mui-color-scheme-dark',
   'mui-color-scheme-light',
   'mui-mode',
-  'nodeTabs.state'
+  'nodeTabs.state',
+  'is-new-ignored-items-v1',
+
+  // todo(nc): refactor into individual app states
+  'metrics.sidebar.state'
 ]
 
 

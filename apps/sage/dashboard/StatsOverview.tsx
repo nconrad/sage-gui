@@ -1,4 +1,5 @@
 import { styled } from '@mui/material'
+import { type ReactNode } from 'react'
 import {
   HubOutlined, WorkOutline, AppsRounded,
   PlaylistAddCheckRounded, GroupOutlined
@@ -16,6 +17,7 @@ type StatsOverviewProps = {
   activeJobs?: number
   totalJobs?: number
   loading?: boolean
+  lastSlot?: ReactNode
 }
 
 
@@ -26,7 +28,8 @@ export default function StatsOverview({
   totalApps,
   activeJobs,
   totalJobs,
-  loading = false
+  loading = false,
+  lastSlot
 }: StatsOverviewProps) {
   const formatValue = (value?: number) => (loading || value === undefined ? '...' : value)
   const isLoaded = (value?: number) => !loading && value !== undefined
@@ -82,6 +85,12 @@ export default function StatsOverview({
           }
           to="/jobs/my-jobs"
         />
+
+        {lastSlot &&
+          <LastSlotCard>
+            {lastSlot}
+          </LastSlotCard>
+        }
       </StatsGrid>
     </StatsContainer>
   )
@@ -109,4 +118,8 @@ const StatsGrid = styled('div')`
 
 const ActiveValue = styled('span')`
   color: ${({ theme }) => theme.palette.success.main};
+`
+
+const LastSlotCard = styled('div')`
+
 `

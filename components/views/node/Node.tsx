@@ -426,12 +426,12 @@ const Imgs = styled('div')`
 `
 
 const LeftSide = styled('div')`
-  margin: 20px;
+  margin: 20px 0;
   flex: 2 1 auto;
 `
 
 const RightSide = styled('div')`
-  margin: 20px 20px 20px 15px;
+  margin: 20px 0 20px 15px;
 `
 
 export const TableContainer = styled('div')`

@@ -39,7 +39,7 @@ export default function WildSageNode(props: Props) {
     <>
       {type == 'WSN' ?
         <WSNView>
-          <img src={wsnode} width={WSN_VIEW_WIDTH} />
+          <img src={wsnode} />
           <VSN>{vsn}</VSN>
           {node &&
             <>
@@ -54,7 +54,7 @@ export default function WildSageNode(props: Props) {
           }
         </WSNView>
         :
-        <div style={{width: WSN_VIEW_WIDTH}} />
+        <div />
       }
     </>
   )
@@ -63,22 +63,21 @@ export default function WildSageNode(props: Props) {
 
 const VSN = styled.div`
   position: absolute;
-  width: 33%;
+  width: 31%;
   height: 12%;
   top: 51%;
   left: 48%;
-  font-size: 3.5em;
+  font-size: 2.9em;
   padding: 0;
   background: #b3b3b3;
 `
-
-const WSN_VIEW_WIDTH = 400
 
 const WSNView = styled.div`
   position: sticky;
   top: 60px;
 
   img {
+    width: 350px;
     padding: 50px;
     -webkit-filter: drop-shadow(2px 2px 2px #ccc);
     filter: drop-shadow(2px 2px 2px #ccc);

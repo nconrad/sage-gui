@@ -1,7 +1,6 @@
 import config from '/config'
 const url = config.auth
 
-// import { handleErrors } from '../fetch-utils'
 import type { VSN } from './beekeeper'
 
 import Auth from '../auth/auth'
@@ -54,13 +53,16 @@ function put(endpoint: string, data) {
 
 
 
-type User = {
+export type User = {
   username: string
   email: string
   name: string
   is_staff: boolean
   is_approved: boolean
   is_superuser: boolean
+  ssh_public_keys: string
+  date_joined: string
+  last_login: string
 }
 
 type Profile = {
@@ -71,6 +73,11 @@ type Profile = {
 }
 
 export type UserInfo = User & Profile
+
+
+export function getUsers() : Promise<User[]> {
+  return get(`${url}/users`)
+}
 
 
 export function getUserDetails() : Promise<User> {
@@ -135,7 +142,7 @@ export async function listMyNodes() : Promise<MyNode[]> {
   return data
 }
 
-export type Project = {
+export type MyProject = {
   name: string
   nodes: {
     vsn: VSN
@@ -149,12 +156,13 @@ export type Project = {
 
 
 export async function listMyProjects() : Promise<{
-  projects: Project[], vsns: VSN[], access: {[vsn: string]: AccessPerm[]}
+  projects: MyProject[], vsns: VSN[], access: {[vsn: string]: AccessPerm[]}
 }> {
   const data = await get(`${url}/users/${user}/projects`)
 
   return data
 }
+
 
 export async function listNodesWithPerm(perm: AccessPerm) : Promise<VSN[]> {
   const nodes = await listMyNodes()
@@ -174,18 +182,6 @@ export async function hasCapability(perm: AccessPerm | AccessPerm[]) : Promise<b
   )
 
   return nodesWithSomePerm.length > 0
-}
-
-export async function listProjects() {
-  const data = await get(`${url}/projects`)
-  return data
-}
-
-
-export async function getAllocationFormData() {
-  const data = await get(`${url}/allocation-requests/form-data/`)
-
-  return data
 }
 
 
