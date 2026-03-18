@@ -5,7 +5,7 @@ import {
   AccountCircleOutlined, GroupOutlined,
   WorkOutline, SelectAll, SensorsRounded,
   FiberNewOutlined, DashboardOutlined,
-  CheckCircleOutline, ListAlt
+  CheckCircleOutline, ListAlt, SettingsOutlined
 } from '@mui/icons-material'
 
 import HardDriveIcon from '/assets/hard-drive.svg'
@@ -198,6 +198,16 @@ const getNavItems = (includeSensors, search) => {
     ]
   }
 
+  items = [...items,
+    {
+      to: 'account/access',
+      icon: <SettingsOutlined />,
+      label: 'Settings',
+      tooltip: 'Settings',
+      pinBottom: true
+    }
+  ]
+
   return items
 }
 
@@ -218,9 +228,10 @@ export default function NodeTabs(props: Props) {
     <Root>
       <CollapsibleNavSidebar
         navItems={navItems}
-        storageKey="nodeTabs.state"
+        storageKey="nodes.sidebar.state"
+        defaultMinimized={true}
         defaultExpanded={{
-          'nodes': true,
+          'nodes': false,
           'user/nodes': false
         }}
         itemIdGenerator={(item) => {

@@ -11,8 +11,8 @@ const keys = [
   'mui-color-scheme-dark',
   'mui-color-scheme-light',
   'mui-mode',
-  'nodeTabs.state',
   'is-new-ignored-items-v1',
+  'nodes.sidebar.state',
 
   // todo(nc): refactor into individual app states
   'metrics.sidebar.state'

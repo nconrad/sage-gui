@@ -48,7 +48,7 @@ import UserProfile from '/components/account/UserProfile'
 import MyNodes from '/components/account/MyNodes'
 import Devices from '/components/account/Devices'
 import DevAccess from '/components/account/DevAccess'
-import AllocationRequest from './allocations/AllocationRequest'
+import RequestAccess from './request-access/RequestAccess'
 
 import Assistant from './assist/Assistant'
 import Dashboard from './dashboard/Dashboard'
@@ -225,6 +225,7 @@ export default function Sage() {
                         <Route path="nodes/project/:sageProject?" element={<Nodes />} />
                         <Route path="nodes/:vsn" element={<Node />} />
                         <Route path="sensors" element={<SensorList project={project} />} />
+                        <Route path="sensors/:name" element={<Sensor />} />
 
                         <Route path="user/:user/dash" element={<RequireAuth><Dashboard /></RequireAuth>} />
                         <Route path="user/:user/nodes" element={<RequireAuth><Nodes /></RequireAuth>} />
@@ -235,9 +236,16 @@ export default function Sage() {
                         <Route path="user/:user/projects" element={<RequireAuth><MyProjects /></RequireAuth>} />
                         <Route path="user/:user/teams" element={<RequireAuth><MyTeams /></RequireAuth>} />
                         <Route path="user/:user/teams/:projectName" element={<RequireAuth><Members /></RequireAuth>} />
+
                       </Route>
 
-                      <Route path="sensors/:name" element={<Sensor />} />
+                      <Route path="/" element={<Account />}>
+                        <Route path="account/profile" element={<RequireAuth><UserProfile /></RequireAuth>} />
+                        <Route path="account/nodes" element={<RequireAuth><MyNodes /></RequireAuth>} />
+                        <Route path="account/dev-devices" element={<RequireAuth><Devices /></RequireAuth>} />
+                        <Route path="account/access" element={<RequireAuth><DevAccess /></RequireAuth>} />
+                        <Route path="request-access" element={<RequireAuth><RequestAccess /></RequireAuth>} />
+                      </Route>
 
 
                       <Route path="/apps" element={<Navigate to="/apps/explore" replace />} />
@@ -262,14 +270,8 @@ export default function Sage() {
 
                       <Route path="data-commons-demo" element={<DataProductSearch />} />
 
-                      <Route path="account" element={<RequireAuth><Account /></RequireAuth>}>
-                        <Route path="profile" element={<RequireAuth><UserProfile /></RequireAuth>} />
-                        <Route path="nodes" element={<RequireAuth><MyNodes /></RequireAuth>} />
-                        <Route path="dev-devices" element={<RequireAuth><Devices /></RequireAuth>} />
-                        <Route path="access" element={<RequireAuth><DevAccess /></RequireAuth>} />
-                      </Route>
 
-                      <Route path="request-access" element={<RequireAuth><AllocationRequest /></RequireAuth>} />
+
 
                       <Route path="assistant" element={<Assistant />} />
 

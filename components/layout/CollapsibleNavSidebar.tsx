@@ -9,7 +9,8 @@ import * as LS from '/components/apis/localStorage'
 const AnimatedSidebar = styled(Sidebar)`
   transition: width .5s ease;
   position: fixed;
-  height: 100vh;
+  top: 60px;
+  height: calc(100vh - 60px);
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -162,6 +163,13 @@ const MinimizeButton = styled(IconButton)`
 
 const Nav = styled('div')`
   margin-top: 0;
+  flex: 1;
+  overflow-y: auto;
+`
+
+const BottomNav = styled('div')`
+  border-top: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#333' : '#e0e0e0'};
+  padding-top: 4px;
 `
 
 const ExpandButton = ({ expanded, onToggle }) => (
@@ -192,6 +200,7 @@ export type NavItem = {
   expanded?: boolean
   parentId?: string
   minimizedLabel?: string
+  pinBottom?: boolean
 } | 'divider'
 
 type Props = {
@@ -200,6 +209,9 @@ type Props = {
   minimizedWidth?: string
   expandedWidth?: string
   defaultExpanded?: Record<string, boolean>
+  defaultMinimized?: boolean
+  collapsible?: boolean
+  header?: React.ReactNode
   itemIdGenerator?: (item: NavItem) => string
   onMinimizedChange?: (minimized: boolean) => void
 }
@@ -210,6 +222,9 @@ export default function CollapsibleNavSidebar({
   minimizedWidth = '75px',
   expandedWidth = '160px',
   defaultExpanded = {},
+  defaultMinimized = false,
+  collapsible = true,
+  header,
   itemIdGenerator = (item) => item !== 'divider' ? (item.to || '') : '',
   onMinimizedChange
 }: Props) {
@@ -217,9 +232,9 @@ export default function CollapsibleNavSidebar({
     const stored = LS.get(storageKey)
     if (stored) {
       const parsed = JSON.parse(stored)
-      return typeof parsed === 'object' ? parsed.minimized ?? false : parsed
+      return typeof parsed === 'object' ? parsed.minimized ?? defaultMinimized : parsed
     }
-    return false
+    return defaultMinimized
   })
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(() => {
     const stored = LS.get(storageKey)
@@ -244,15 +259,22 @@ export default function CollapsibleNavSidebar({
   }
 
   return (
-    <AnimatedSidebar width={minimized ? minimizedWidth : expandedWidth} data-minimized={minimized}>
-      <MinimizeButtonWrapper className={minimized ? 'minimized' : 'flex justify-end'}>
-        <MinimizeButton onClick={toggleMinimized} size="small">
-          {minimized ? <ChevronRight /> : <ChevronLeft />}
-        </MinimizeButton>
-      </MinimizeButtonWrapper>
+    <AnimatedSidebar width={minimized ? minimizedWidth : expandedWidth} data-minimized={minimized}
+      style={{ display: 'flex', flexDirection: 'column' }}>
+      {collapsible && (
+        <MinimizeButtonWrapper className={minimized ? 'minimized' : 'flex justify-end'}>
+          <MinimizeButton onClick={toggleMinimized} size="small">
+            {minimized ? <ChevronRight /> : <ChevronLeft />}
+          </MinimizeButton>
+        </MinimizeButtonWrapper>
+      )}
       {minimized && <Divider sx={{margin: '10px 0'}} />}
+      {!minimized && header && <>
+        {header}
+        <Divider sx={{margin: '8px 0 4px 0'}} />
+      </>}
       <Nav>
-        {navItems.map((item, index) => {
+        {navItems.filter(item => item === 'divider' || !item.pinBottom).map((item, index) => {
           if (item == 'divider') {
             return <Divider key={`divider-${index}`} sx={{margin: '10px 0'}} />
           }
@@ -276,7 +298,7 @@ export default function CollapsibleNavSidebar({
                 <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
               )}
               <div style={{
-                marginLeft: item.expandable && !minimized ? '1.5rem' : minimized ? '0' : '1.5rem',
+                marginLeft: item.expandable && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
               }} className="flex items-center">
                 {item.icon}
               </div>
@@ -295,6 +317,42 @@ export default function CollapsibleNavSidebar({
           )
         })}
       </Nav>
+      {navItems.some(item => item !== 'divider' && item.pinBottom) && (
+        <BottomNav>
+          {navItems.filter(item => item !== 'divider' && item.pinBottom).map((item) => {
+            if (item === 'divider') return null
+            const itemId = itemIdGenerator(item)
+            const isExpanded = expandedItems[itemId] ?? item.expanded
+            const itemContent = (
+              <Item
+                key={item.to}
+                to={item.to || ''}
+                className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
+                end
+              >
+                {item.expandable && !minimized && (
+                  <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
+                )}
+                <div style={{
+                  marginLeft: item.expandable && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
+                }} className="flex items-center">
+                  {item.icon}
+                </div>
+                {!minimized ? (
+                  <div className="nav-label" style={{ marginLeft: '.5rem' }}>{item.label}</div>
+                ) : (
+                  <div className="minimized-label">{item.minimizedLabel || item.label}</div>
+                )}
+              </Item>
+            )
+            return (
+              <Tooltip key={item.to} title={item.tooltip || item.label} placement="right" enterDelay={0}>
+                {itemContent}
+              </Tooltip>
+            )
+          })}
+        </BottomNav>
+      )}
     </AnimatedSidebar>
   )
 }

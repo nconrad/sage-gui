@@ -432,6 +432,7 @@ const LeftSide = styled('div')`
 
 const RightSide = styled('div')`
   margin: 20px 0 20px 15px;
+  min-width: 350px;
 `
 
 export const TableContainer = styled('div')`

@@ -2,7 +2,10 @@ import { useState, memo } from 'react'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
-import { IconButton, Badge, Tooltip, Popper, ClickAwayListener, List, ListItem, ListItemText } from '@mui/material'
+import {
+  IconButton, Badge, Tooltip, Popper, ClickAwayListener,
+  List, ListItem, ListItemText, Button, ButtonGroup
+} from '@mui/material'
 import {
   FilePresentOutlined,
   TerminalOutlined,
@@ -778,6 +781,39 @@ export function additionalSensors(v, obj) {
 }
 
 
+type AccessFilterButtonsProps = {
+  accessFilters: Set<AccessPerm>
+  onToggle: (perm: AccessPerm) => void
+}
+
+export function AccessFilterButtons({ accessFilters, onToggle }: AccessFilterButtonsProps) {
+  return (
+    <ButtonGroup size="small" variant="outlined">
+      <Tooltip title="File (image, audio, etc.) Access" placement="top" arrow>
+        <Button
+          onClick={() => onToggle('files')}
+          variant={accessFilters.has('files') ? 'contained' : 'outlined'}
+          startIcon={<FilePresentOutlined />}
+        >Files</Button>
+      </Tooltip>
+      <Tooltip title="Develop / ssh Remote Access" placement="top" arrow>
+        <Button
+          onClick={() => onToggle('develop')}
+          variant={accessFilters.has('develop') ? 'contained' : 'outlined'}
+          startIcon={<TerminalOutlined />}
+        >Develop</Button>
+      </Tooltip>
+      <Tooltip title="Job Scheduling Access" placement="top" arrow>
+        <Button
+          onClick={() => onToggle('schedule')}
+          variant={accessFilters.has('schedule') ? 'contained' : 'outlined'}
+          startIcon={<ViewTimelineOutlined />}
+        >Schedule</Button>
+      </Tooltip>
+    </ButtonGroup>
+  )
+}
+
 export function accessFormatter(access: AccessPerm[] = []) {
   const hasFiles = access.includes('files')
   const hasDevelop = access.includes('develop')
@@ -785,7 +821,7 @@ export function accessFormatter(access: AccessPerm[] = []) {
 
   return (
     <div className="flex items-center gap">
-      <Tooltip title="File (image, audio, etc.) Access" placement="top" arrow>
+      <Tooltip title="File Access (image, audio, etc.)" placement="top" arrow>
         <CapabilityIconContainer available={hasFiles}>
           <FilePresentOutlined />
           {!hasFiles && <DisabledOverlay />}

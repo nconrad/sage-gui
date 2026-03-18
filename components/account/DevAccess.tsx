@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { styled } from '@mui/material'
+import { Link } from 'react-router-dom'
 
 import { Button, Alert, FormControl, OutlinedInput, FormLabel } from '@mui/material'
+import { VpnKeyOutlined } from '@mui/icons-material'
 
 import { useProgress } from '/components/progress/ProgressProvider'
 import Clipboard from '/components/utils/Clipboard'
@@ -20,6 +22,25 @@ const DEV_SCHEDULE_PERMS = ['develop', 'schedule'] as User.AccessPerm[]
 const DEV_PERM = 'develop' as User.AccessPerm
 
 
+const CodeBoxRoot = styled('pre')`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8f8f8'};
+  border: 1px solid ${({ theme }) => theme.palette.divider};
+`
+
+function CodeBox({ children, actions }: { children: React.ReactNode; actions?: React.ReactNode }) {
+  return (
+    <CodeBoxRoot className="code text-xs">
+      <span>{children}</span>
+      {actions}
+    </CodeBoxRoot>
+  )
+}
+
+/*
 const requestInfo =
 `Name:
 Organization or affiliation:
@@ -33,6 +54,7 @@ Type of access (check all that apply):
 Nodes:
   [If known, please list the project or nodes you need access to.]
 `
+*/
 
 
 type Form = {
@@ -83,17 +105,25 @@ export default function DevAccess() {
 
   return (
     <Root>
+      <div className="flex items-center gap" style={{ marginBottom: '1.5rem' }}>
+        <h1 className="no-margin">Access Credentials</h1>
+      </div>
+
+      <p>
+        <b>Need access to nodes or protected files?</b>  Fill out
+        the form under the tab <Link to="/request-access">Request Access</Link>
+      </p><br/>
+
 
       <CopyToken>
-        <h1 className="no-margin">Your Access Token</h1>
+        <h2>Your Access Token</h2>
 
         {(isPermitted || isApproved) ?
           <div className="flex items-center justify-between gap">
             <div className="flex-grow">
-              <pre style={{width: 375}}>
+              <CodeBox actions={<CopyBtn tooltip="Copy token" onClick={handleCopyToken} />}>
                 **************************************
-                <CopyBtn tooltip="Copy token" onClick={handleCopyToken} />
-              </pre>
+              </CodeBox>
             </div>
             <div>
               <Alert severity="warning">
@@ -116,11 +146,12 @@ export default function DevAccess() {
         }
       </CopyToken>
 
-      <h1 className="no-margin">Update SSH Public Keys</h1>
+      <h2>Update SSH Public Keys</h2>
 
       {!canDev && <p>
         <Alert severity="info">
-          <b>Note:</b> you do not have dev access on any nodes.  Please <b><a href={contactUs}>contact us</a></b> if
+          <b>Note:</b> you do not have dev access on any nodes.
+          Please <b><Link to="/request-access">Request Access</Link></b> if
           you'd like developer access.
         </Alert>
       </p>}
@@ -176,12 +207,13 @@ export default function DevAccess() {
 
       <StepTitle icon="1" label="Request access" />
       <Step>
-        <p>
-          First, <b><a href={contactUs} target="_blank" rel="noreferrer">email us</a></b> with
-          the subject "Access Request", along with with the following info about your request:
-        </p>
+        <p>First, use the request access form to request access to the necessary nodes or files:</p>
+        <div style={{margin: '0 2rem 2rem 1rem'}}>
+          <Button variant="contained" component={Link} to="/request-access">
+            Request Access
+          </Button>
+        </div>
 
-        <Clipboard content={requestInfo} />
       </Step>
 
       <StepTitle icon="2" label="Update SSH config" />
@@ -222,9 +254,9 @@ export default function DevAccess() {
           Note that upon first connecting to a node, please check that the fingerprint matches:
         </p>
 
-        <pre>
+        <CodeBox>
           ED25519 key fingerprint is SHA256:0EZvahC0dry74dmu7DBjweZwGWMt2zvV7rWZTb3Ao9g.
-        </pre>
+        </CodeBox>
       </Step>
     </Root>
   )

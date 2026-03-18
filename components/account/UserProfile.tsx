@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 
-import { Button, Alert } from '@mui/material'
+import { Button, Alert, Divider } from '@mui/material'
 import EditIcon from '@mui/icons-material/EditRounded'
 import CancelIcon from '@mui/icons-material/UndoRounded'
+import { AccountCircleOutlined } from '@mui/icons-material'
 
 import { useProgress } from '/components/progress/ProgressProvider'
 
@@ -80,22 +81,27 @@ export default function UserProfile() {
 
   return (
     <Root>
-      <div className="flex items-center gap">
-        <h1 className="no-margin">My Profile</h1>
-        {isEditing ?
-          <Button
-            variant="outlined"
-            className="cancel"
-            onClick={handleCancel}
-            startIcon={<CancelIcon/>}
-          >
-            Cancel
-          </Button> :
-          <Button startIcon={<EditIcon/>} onClick={() => setIsEditing(true)}>
-            Edit
-          </Button>
-        }
+      <div className="flex items-center justify-between" style={{ marginBottom: '1.5rem' }}>
+        <div className="flex items-center gap">
+          <h1 className="no-margin flex gap">
+            My Profile
+            {isEditing ?
+              <Button
+                variant="outlined"
+                className="cancel"
+                onClick={handleCancel}
+                startIcon={<CancelIcon/>}
+              >
+                Cancel
+              </Button> :
+              <Button startIcon={<EditIcon/>} onClick={() => setIsEditing(true)}>
+                Edit
+              </Button>
+            }
+          </h1>
+        </div>
       </div>
+
 
       {data &&
         <div className="flex column user-info">
@@ -124,10 +130,6 @@ export default function UserProfile() {
 }
 
 const Root = styled.div`
-  .user-info {
-    margin-top: 2em;
-  }
-
   .delete {
     border-color: #660000;
   }

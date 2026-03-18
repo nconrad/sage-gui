@@ -53,6 +53,31 @@ function put(endpoint: string, data) {
 
 
 
+type SendRequestParams = {
+  subject: string
+  message: string
+  email: string
+  request_type: string
+}
+
+export function sendFeedback(params: SendRequestParams) : Promise<void> {
+  const { email, subject, message, request_type = 'access request' } = params
+
+  const form = new FormData()
+  form.append('email', email)
+  form.append('subject', subject)
+  form.append('message', message)
+  form.append('request_type', request_type)
+
+  // Do NOT set Content-Type — the browser must set it with the multipart boundary.
+  return fetch(`${url}/send-request/`, {
+    method: 'POST',
+    headers: options.headers,
+    body: form,
+  }).then(handleErrors) as Promise<void>
+}
+
+
 export type User = {
   username: string
   email: string
@@ -116,6 +141,7 @@ export type MyNode = {
   access: AccessPerm[]
 
   // for convenience
+  files: boolean
   schedule: boolean
   develop: boolean
 }
@@ -135,6 +161,7 @@ export async function listMyNodes() : Promise<MyNode[]> {
 
   data = data.map(obj => ({
     ...obj,
+    files: obj.access.includes('files'),
     schedule: obj.access.includes('schedule'),
     develop: obj.access.includes('develop')
   }))
@@ -183,5 +210,4 @@ export async function hasCapability(perm: AccessPerm | AccessPerm[]) : Promise<b
 
   return nodesWithSomePerm.length > 0
 }
-
 

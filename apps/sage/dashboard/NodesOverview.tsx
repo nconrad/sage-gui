@@ -2,13 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { styled } from '@mui/material'
 import {
-  HubOutlined, ArrowForwardRounded, FilePresentOutlined,
-  TerminalOutlined, ViewTimelineOutlined, SensorsOutlined
+  HubOutlined, ArrowForwardRounded, SensorsOutlined
 } from '@mui/icons-material'
 import { Button, ButtonGroup, Tooltip } from '@mui/material'
 
-import { SensorIcons } from '/components/views/nodes/nodeFormatters'
-import { accessFormatter } from '/components/views/nodes/nodeFormatters'
+import { SensorIcons, accessFormatter, AccessFilterButtons } from '/components/views/nodes/nodeFormatters'
 import { capabilityIcons } from '/components/views/sensor/capabilityIcons'
 import Table from '/components/table/Table'
 import { queryData } from '/components/data/queryData'
@@ -194,29 +192,7 @@ export default function NodesOverview({
 
         <FilterGroup>
           <FilterLabel>Access:</FilterLabel>
-          <ButtonGroup size="small" variant="outlined">
-            <Button
-              onClick={() => toggleAccessFilter('files')}
-              variant={accessFilters.has('files') ? 'contained' : 'outlined'}
-              startIcon={<FilePresentOutlined />}
-            >
-              Files
-            </Button>
-            <Button
-              onClick={() => toggleAccessFilter('develop')}
-              variant={accessFilters.has('develop') ? 'contained' : 'outlined'}
-              startIcon={<TerminalOutlined />}
-            >
-              Develop
-            </Button>
-            <Button
-              onClick={() => toggleAccessFilter('schedule')}
-              variant={accessFilters.has('schedule') ? 'contained' : 'outlined'}
-              startIcon={<ViewTimelineOutlined />}
-            >
-              Schedule
-            </Button>
-          </ButtonGroup>
+          <AccessFilterButtons accessFilters={accessFilters} onToggle={toggleAccessFilter} />
         </FilterGroup>
       </FilterBar>
 
