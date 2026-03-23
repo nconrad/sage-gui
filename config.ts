@@ -26,10 +26,19 @@ type Config = {
   disableMaps?: boolean
   notice?: Notice    // optional notice banner displayed site-wide
   noticeURL?: string // optional banner config pulled from github
+  scheduledMaintenance?: ScheduledMaintenance // weekly maintenance banner config
 }
 
 type Notice = {
   message: string,
+  severity: 'info' | 'warning' | 'error' | 'success'
+}
+
+type ScheduledMaintenance = {
+  schedule: { type: 'weekly', day: string }
+  startTime: string  // 'HH:MM' in CST
+  endTime: string    // 'HH:MM' in CST
+  message: string
   severity: 'info' | 'warning' | 'error' | 'success'
 }
 
@@ -74,7 +83,16 @@ const dev: Config = {
 const config: Config = {
   ...(process.env.SAGE_UI_SERVICE_CONFIG == 'dev' ? dev : prod),
   disableMaps: false,
-  noticeURL: 'https://raw.githubusercontent.com/waggle-sensor/portal-notice/main/notice.json'
+  noticeURL: 'https://raw.githubusercontent.com/waggle-sensor/portal-notice/main/notice.json',
+  scheduledMaintenance: {
+    schedule: {type:  'weekly', day: 'sunday'},
+    startTime: '19:00', // 7:00 PM CST
+    endTime: '20:00',   // 8:00 PM CST
+    message:
+      'Scheduled weekly maintenance on Sundays, 7:00 PM CST to 8:00 PM CST is currently in progress. ' +
+      'During this time, node measurements, system status, and the Data API may be unavailable. ',
+    severity: 'warning'
+  },
   /*
   notice: {
     message:

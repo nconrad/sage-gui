@@ -180,17 +180,30 @@ export default function Sage() {
 
   useEffect(() => {
     if (config.notice) {
-      // Use notice from config if available
       setNotice(config.notice)
-    } else if (config.noticeURL) {
-      // Fetch notice from external URL if provided
+      return
+    }
+
+    if (config.scheduledMaintenance) {
+      const { schedule, startTime, endTime, message, severity } = config.scheduledMaintenance
+      const now = new Date()
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const [sh, sm] = startTime.split(':').map(Number)
+      const [eh, em] = endTime.split(':').map(Number)
+      const mins = now.getHours() * 60 + now.getMinutes()
+      const inWindow = days[now.getDay()] === schedule.day.toLowerCase()
+        && mins >= sh * 60 + sm
+        && mins < eh * 60 + em
+      if (inWindow) {
+        setNotice({ message, severity })
+        return
+      }
+    }
+
+    if (config.noticeURL) {
       fetch(config.noticeURL)
         .then(res => res.json())
-        .then(data => {
-          if (data.message) {
-            setNotice(data)
-          }
-        })
+        .then(data => { if (data.message) setNotice(data) })
         .catch(err => console.error('Error fetching notice:', err))
     }
   }, [])
@@ -207,7 +220,11 @@ export default function Sage() {
             <SnackbarProvider autoHideDuration={3000} preventDuplicate maxSnack={2}>
               <Container>
                 {notice &&
-                  <Alert severity={notice.severity || 'info'} onClose={() => setNotice(null)}>
+                  <Alert
+                    severity={notice.severity || 'info'}
+                    onClose={() => setNotice(null)}
+                    sx={{ position: 'sticky', top: 60, zIndex: 200 }}
+                  >
                     <b>{notice.message}</b>
                   </Alert>
                 }
@@ -269,9 +286,6 @@ export default function Sage() {
                       <Route path="/labs/image-search" element={<ImageSearch />} />
 
                       <Route path="data-commons-demo" element={<DataProductSearch />} />
-
-
-
 
                       <Route path="assistant" element={<Assistant />} />
 
