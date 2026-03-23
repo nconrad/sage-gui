@@ -29,7 +29,7 @@ type SubmittedData = {
 
 export function formatSubmission(data: SubmittedData): string {
   const lines = [
-    `# Access Request`,
+    `# Submission Summary`,
     ``,
     `## Your Information`,
     `- **Name:** ${data.requester_name || '—'}`,
@@ -60,7 +60,7 @@ export function formatSubmission(data: SubmittedData): string {
     `- **File Access:** ${data.file_access ? 'Yes' : 'No'}`,
     ``,
     `## Related to Proposal`,
-    `**${data.related_to_proposal || '—'}**`, 
+    `**${data.related_to_proposal || '—'}**`,
     ...(data.related_to_proposal === 'yes' ? [
       ``,
       `### Proposals`,

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import { styled } from '@mui/material'
 import { Outlet } from 'react-router-dom'
 
 import CollapsibleNavSidebar, { NavItem } from '/components/layout/CollapsibleNavSidebar'
-import { CardViewStyle } from '/components/layout/Layout'
 import * as User from '/components/apis/user'
 import Auth from '/components/auth/auth'
 
-import { AccountCircleOutlined, HubOutlined, LockOpenOutlined, VpnKeyOutlined, SettingsRounded }
-  from '@mui/icons-material'
+import {
+  AccountCircleOutlined, HubOutlined, LockOpenOutlined, VpnKeyOutlined
+} from '@mui/icons-material'
 // import DevicesIcon from '@mui/icons-material/DeviceHubRounded'
 
 
@@ -88,25 +88,14 @@ export default function Account() {
   )
 }
 
-const Root = styled.div`
-  display: flex;
-  height: 100%;
-`
-
-const Main = styled.div`
-  padding: 2rem;
-  flex-grow: 1;
-  overflow-y: auto;
-  margin-left: 180px;
-`
-
-const PageHeader = styled.div`
+const PageHeader = styled('div')`
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid ${({ theme }) =>
+    theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'};
 `
 
-const PageTitle = styled.h1`
+const PageTitle = styled('h1')`
   margin: 0;
   font-size: 1.6rem;
   line-height: 1.2;
@@ -118,13 +107,13 @@ const PageTitle = styled.h1`
   }
 `
 
-const PageSubtitle = styled.p`
+const PageSubtitle = styled('p')`
   margin: 0.3rem 0 0 0;
   color: #888;
   font-size: 1em;
 `
 
-const SidebarHeader = styled.div`
+const SidebarHeader = styled('div')`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -136,4 +125,16 @@ const SidebarHeader = styled.div`
   opacity: 0.55;
   white-space: nowrap;
   overflow: hidden;
+`
+
+const Root = styled('div')`
+  display: flex;
+  height: 100%;
+`
+
+const Main = styled('div')`
+  padding: 2rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-left: 180px;
 `

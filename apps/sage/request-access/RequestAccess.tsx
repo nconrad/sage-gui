@@ -206,7 +206,11 @@ function HelpText({ title }: { title: React.ReactNode }) {
 }
 
 const Divider = (props: DividerProps) =>
-  <MuiDivider sx={{ borderColor: 'rgba(0, 0, 0, 0.08)' }} {...props} />
+  <MuiDivider
+    sx={(theme) => ({ borderColor: theme.palette.mode === 'light' ?
+      'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)' })}
+    {...props}
+  />
 
 
 export type AllocationType = 'testbed' | 'renew' | 'add' | 'file_access'
@@ -366,12 +370,16 @@ export default function ProjectForm() {
     setSubmitStatus('pending')
     setSubmitError(null)
 
-    sendFeedback({
-      subject: formData.project_title,
-      email: formData.requester_email,
-      message: formatSubmission(data),
-      request_type: 'access request',
-    })
+    const submit = process.env.NODE_ENV === 'development'
+      ? Promise.resolve()
+      : sendFeedback({
+        subject: formData.project_title,
+        email: formData.requester_email,
+        message: formatSubmission(data),
+        request_type: 'access request',
+      })
+
+    submit
       .then(() => {
         setSubmittedData(data)
         setSubmitStatus('success')
@@ -381,7 +389,6 @@ export default function ProjectForm() {
         setSubmitStatus('error')
         setSubmitError(err?.message)
       })
-
   }
 
 
@@ -467,7 +474,7 @@ export default function ProjectForm() {
 
         {formSpec && ['testbed', 'add', 'file_access', 'renew'].includes(reqType) &&
           <>
-            <Divider sx={{borderColor: 'rgba(0, 0, 0, 0.08)'}}/><br/>
+            <Divider /><br/>
             <StepTitle
               icon="2"
               label={getProjectSelectionLabel(reqType)}
@@ -1030,14 +1037,28 @@ export default function ProjectForm() {
           <Alert severity="error" sx={{ mt: 3 }}>{submitError}</Alert>
         }
 
-        {submitStatus === 'success' && submittedData &&
+        {submitStatus === 'success' && submittedData && <>
           <Alert severity="success" sx={{ mt: 3 }}>
             Your request has been submitted successfully!
             We will follow up with you at <b>{submittedData.requester_email}</b> within 1-2 business days.
             If you don&apos;t receive a response or have any questions in the meantime,
             please <b><a href={config.contactUs}>contact us</a></b>.
           </Alert>
-        }
+          {process.env.NODE_ENV === 'development' &&
+            <pre
+              style={{
+                marginTop: '1rem',
+                padding: '1rem',
+                background: '#f5f5f5',
+                overflow: 'auto',
+                fontSize: '0.85em',
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {formatSubmission(submittedData)}
+            </pre>
+          }
+        </>}
       </Container>
       <br/><br/><br/>
     </Root>

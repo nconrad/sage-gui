@@ -3,7 +3,6 @@ import { styled } from '@mui/material'
 import { Link } from 'react-router-dom'
 
 import { Button, Alert, FormControl, OutlinedInput, FormLabel } from '@mui/material'
-import { VpnKeyOutlined } from '@mui/icons-material'
 
 import { useProgress } from '/components/progress/ProgressProvider'
 import Clipboard from '/components/utils/Clipboard'

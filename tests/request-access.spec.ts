@@ -61,6 +61,11 @@ async function setupMocks(page) {
       body: JSON.stringify({ organization: mockUser.organization, department: '', bio: '' })
     })
   )
+
+  // Mock send-request endpoint
+  await page.route(`${AUTH_URL}/send-request/**`, route =>
+    route.fulfill({ status: 200, body: '' })
+  )
 }
 
 
@@ -77,8 +82,8 @@ test.describe('Request Access form', () => {
 
   test('renders form title', async ({ page }) => {
     await page.goto(ROUTE)
-    await expect(page.getByRole('heading', { level: 1 }))
-      .toContainText('Sage Access Request')
+    await expect(page.getByRole('heading', { name: 'Sage Access Request' }))
+      .toBeVisible()
   })
 
 
@@ -129,6 +134,11 @@ test.describe('Request Access form', () => {
     await page.locator('textarea[name="publication_plan"]').fill('Open-access journal publication')
     await page.locator('textarea[name="data_collection"]').fill('Aggregated sensor scores only')
     await page.locator('input[name="is_non_commercial"]').check()
+    await page.locator('input[name="running_apps"]').check()
+    const scienceInput1 = page.getByLabel('Science field; select all that apply')
+    await scienceInput1.click()
+    await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+    await page.keyboard.press('Escape')
 
     await expect(page.getByRole('button', { name: 'Submit!' })).toBeEnabled()
   })
@@ -143,13 +153,18 @@ test.describe('Request Access form', () => {
     await page.getByLabel('PI Email').fill('jane@example.com')
     await page.getByLabel('PI Institution').fill('Test University')
     await page.getByLabel('Project Title').fill('My Test Project')
-    await page.getByLabel('Project Short Name').fill('MTP')
+    await page.getByLabel('Project Name').fill('MTP')
     await page.locator('input[name="related_to_proposal"][value="no"]').click()
 
     await page.locator('textarea[name="edge_code_description"]').fill('Motion detection at the edge')
     await page.locator('textarea[name="publication_plan"]').fill('Open-access journal publication')
     await page.locator('textarea[name="data_collection"]').fill('Aggregated scores, no PII')
     await page.locator('input[name="is_non_commercial"]').check()
+    await page.locator('input[name="running_apps"]').check()
+    const scienceInput2 = page.getByLabel('Science field; select all that apply')
+    await scienceInput2.click()
+    await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+    await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'Submit!' }).click()
 
@@ -171,7 +186,7 @@ test.describe('Request Access form', () => {
     await page.goto(ROUTE)
     await page.getByLabel('Request access to specific nodes or projects').click()
 
-    await page.getByLabel('I\'m the Principal Investigator (PI)').click()
+    await page.getByLabel('I\'m also the Principal Investigator (PI)').click()
 
     await expect(page.getByLabel('PI Name')).toHaveValue(mockUser.name)
     await expect(page.getByLabel('PI Email')).toHaveValue(mockUser.email)
@@ -194,13 +209,13 @@ test.describe('Request Access form', () => {
     await page.getByLabel('Request access to specific nodes or projects').click()
 
     // one row by default
-    await expect(page.getByLabel('Grant Number/ID')).toHaveCount(1)
+    await expect(page.getByLabel('Grant Number or ID')).toHaveCount(1)
 
     await page.getByRole('button', { name: 'Add Another Funding Source' }).click()
-    await expect(page.getByLabel('Grant Number/ID')).toHaveCount(2)
+    await expect(page.getByLabel('Grant Number or ID')).toHaveCount(2)
 
     await page.getByRole('button', { name: 'Remove' }).first().click()
-    await expect(page.getByLabel('Grant Number/ID')).toHaveCount(1)
+    await expect(page.getByLabel('Grant Number or ID')).toHaveCount(1)
   })
 
 
@@ -232,6 +247,11 @@ test.describe('Request Access form', () => {
     await page.locator('textarea[name="publication_plan"]').fill('Open-access')
     await page.locator('textarea[name="data_collection"]').fill('Sensor aggregates')
     await page.locator('input[name="is_non_commercial"]').check()
+    await page.locator('input[name="running_apps"]').check()
+    const scienceInput3 = page.getByLabel('Science field; select all that apply')
+    await scienceInput3.click()
+    await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+    await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'Submit!' }).click()
     await expect(page.locator('pre')).toContainText('maybe')
@@ -252,6 +272,11 @@ test.describe('Request Access form', () => {
     await page.locator('textarea[name="publication_plan"]').fill('Results will be published in open-access journals')
     await page.locator('textarea[name="data_collection"]').fill('Aggregated sensor scores only, no PII')
     await page.locator('input[name="is_non_commercial"]').check()
+    await page.locator('input[name="running_apps"]').check()
+    const scienceInput4 = page.getByLabel('Science field; select all that apply')
+    await scienceInput4.click()
+    await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+    await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'Submit!' }).click()
 
@@ -260,6 +285,71 @@ test.describe('Request Access form', () => {
     await expect(summary).toContainText('Results will be published in open-access journals')
     await expect(summary).toContainText('Aggregated sensor scores only, no PII')
     await expect(summary).toContainText('Confirmed')
+  })
+
+
+  test.describe('file_access (protected data sets) type', () => {
+
+    test.beforeEach(async ({ page }) => {
+      await page.goto(ROUTE)
+      await page.getByLabel('Request access to protected data sets').click()
+    })
+
+    test('hides Running Apps and Shell Access permissions', async ({ page }) => {
+      await expect(page.locator('input[name="running_apps"]')).not.toBeVisible()
+      await expect(page.locator('input[name="shell_access"]')).not.toBeVisible()
+      await expect(page.locator('input[name="file_access"]')).toBeVisible()
+    })
+
+    test('auto-checks file_access permission', async ({ page }) => {
+      await expect(page.locator('input[name="file_access"]')).toBeChecked()
+    })
+
+    test('hides Project Title field', async ({ page }) => {
+      await expect(page.getByLabel('Project Title')).not.toBeVisible()
+    })
+
+    test('hides edge code and publication plan fields', async ({ page }) => {
+      await expect(page.locator('textarea[name="edge_code_description"]')).not.toBeVisible()
+      await expect(page.locator('textarea[name="publication_plan"]')).not.toBeVisible()
+    })
+
+    test('submit enables without project title or edge code fields', async ({ page }) => {
+      await page.getByLabel('PI Name').fill('Jane Smith')
+      await page.getByLabel('PI Email').fill('jane@example.com')
+      await page.locator('input[name="related_to_proposal"][value="no"]').click()
+      await page.locator('textarea[name="data_collection"]').fill('Protected sensor data')
+      await page.locator('input[name="is_non_commercial"]').check()
+
+      const scienceInput = page.getByLabel('Science field; select all that apply')
+      await scienceInput.click()
+      await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+      await page.keyboard.press('Escape')
+
+      await expect(page.getByRole('button', { name: 'Submit!' })).toBeEnabled()
+    })
+
+    test('submit shows summary with file_access permission', async ({ page }) => {
+      await page.getByLabel('PI Name').fill('Jane Smith')
+      await page.getByLabel('PI Email').fill('jane@example.com')
+      await page.locator('input[name="related_to_proposal"][value="no"]').click()
+      await page.locator('textarea[name="data_collection"]').fill('Protected sensor data')
+      await page.locator('input[name="is_non_commercial"]').check()
+
+      const scienceInput = page.getByLabel('Science field; select all that apply')
+      await scienceInput.click()
+      await page.getByRole('option', { name: 'Computer Science', exact: true }).click()
+      await page.keyboard.press('Escape')
+
+      await page.getByRole('button', { name: 'Submit!' }).click()
+
+      const summary = page.locator('pre')
+      await expect(summary).toBeVisible()
+      await expect(summary).toContainText('Submission Summary')
+      await expect(summary).toContainText('**File Access:** Yes')
+      await expect(summary).toContainText('Protected sensor data')
+    })
+
   })
 
 })

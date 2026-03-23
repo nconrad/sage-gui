@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 
 import styled from 'styled-components'
 import { useProgress } from '/components/progress/ProgressProvider'
-import { HubOutlined } from '@mui/icons-material'
 
 import Table from '/components/table/Table'
 import * as User from '/components/apis/user'
