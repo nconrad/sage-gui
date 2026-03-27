@@ -3,6 +3,35 @@
 The following are some notable changes to the UI
 
 
+## [3.5.0](https://github.com/sagecontinuum/sage-gui/compare/v3.3.0...v3.5.0) (2026-03-27)
+
+
+### Features
+
+* add access permissions to dashboard (and other enhancements) ([4a835a7](https://github.com/sagecontinuum/sage-gui/commit/4a835a71e40a4844d9da79a08cb0f1d78a379640))
+* add image search (prototype) ([28784ca](https://github.com/sagecontinuum/sage-gui/commit/28784ca80728fc99ef160cebd4ce5248b956df74))
+* add menu hover and click on on navbar ([4a15c44](https://github.com/sagecontinuum/sage-gui/commit/4a15c44a0b2b14824e6acf03c41d8c0960221858))
+* add resubmit app shortcut button; waggle-sensor/tickets[#222](https://github.com/sagecontinuum/sage-gui/issues/222) ([fe3e6ee](https://github.com/sagecontinuum/sage-gui/commit/fe3e6eeb3449d2adccc9261ec4a59ca76fe56e39))
+* add search, capabilities, and filter to sensor view; waggle-sensor/tickets[#224](https://github.com/sagecontinuum/sage-gui/issues/224) ([ed94d8f](https://github.com/sagecontinuum/sage-gui/commit/ed94d8f64675c160e9172fdba3d6e449b4e7f10b))
+* add sensor capabilities to node table and filtering dropdown; waggle-sensor/tickets[#224](https://github.com/sagecontinuum/sage-gui/issues/224) ([3283b5f](https://github.com/sagecontinuum/sage-gui/commit/3283b5f9693a314c4c4bdc36b22f0080d76bc8eb))
+* add sidebar to jobs view; add create app and job buttons ([49e9682](https://github.com/sagecontinuum/sage-gui/commit/49e9682d751034e6cccd13efe5708b17386ec304))
+* add simple "my nodes/apps" overview and "my sensors" to dash ([0a5164b](https://github.com/sagecontinuum/sage-gui/commit/0a5164b6baeecee6014645183f36c21241e58fff))
+* **admin:** add job/plugin metrics tab; refactoring ([661ac3b](https://github.com/sagecontinuum/sage-gui/commit/661ac3b6369cbdd7a5ace57c42b47c4411a3bf51))
+* **data:** add "my recent data" (concept) ([1272bb6](https://github.com/sagecontinuum/sage-gui/commit/1272bb63c1f62b832b592eafd46ac2b360f44598))
+* **data:** add ptz app viewer ([fe7c4d7](https://github.com/sagecontinuum/sage-gui/commit/fe7c4d7021d5b029e5f86443fdcbe81c983bc189))
+* pull notices from GH ([aafe25d](https://github.com/sagecontinuum/sage-gui/commit/aafe25ddaeeb5eead8d02f059259a138101d40a8))
+* redesigned nodes view; new sidebar; improved SGT filtering; add my nodes, projects, and team views; new sensors column; new dashboard (prototype); other improvements ([5838430](https://github.com/sagecontinuum/sage-gui/commit/5838430caecb7811c7ccd6a6c75c210696d3c886))
+* support dark mode styling with toggle ([7315cc2](https://github.com/sagecontinuum/sage-gui/commit/7315cc2d98475355532c90897c3c11b9dc8da2db))
+
+
+### Bug Fixes
+
+* **data:** show query browser charts if there's some strings which represent a number; also improves messaging around node access; moves labs image search url; fixes waggle-sensor/tickets[#235](https://github.com/sagecontinuum/sage-gui/issues/235) ([f6105a8](https://github.com/sagecontinuum/sage-gui/commit/f6105a8b09ab69850382c864bc3f1f789178aa25))
+* fix table shift-click styling bug ([45e587d](https://github.com/sagecontinuum/sage-gui/commit/45e587d94fd50f34e8c13add2a70f14b38ed3cdb))
+* improve loading of status view; styling improvements and ux tweaks ([1aa6bd5](https://github.com/sagecontinuum/sage-gui/commit/1aa6bd576c3712dc63459573f699861d867ba2ab))
+* **jobs:** fix job state sorting; (and various dash-related improvements) ([7e4cea4](https://github.com/sagecontinuum/sage-gui/commit/7e4cea4491439ee2aacb461783146e9fd0e6d8fd))
+* show uncategorized sensors in node listings; improve tooltips and interactive behavior ([2b7770f](https://github.com/sagecontinuum/sage-gui/commit/2b7770f3b86feac3036ac8177492fd7577495d87))
+
 ## [3.4.0](https://github.com/sagecontinuum/sage-gui/compare/v3.3.0...v3.4.0) (2025-09-22)
 
 
