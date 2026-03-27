@@ -33,7 +33,7 @@ const userBadgeSx = {
 const getNavItems = (includeSensors, search) => {
   let items: NavItem[] = [
     {
-      to: `nodes/all`,
+      to: `all-nodes`,
       icon: <SelectAll />,
       label: 'All Nodes',
       tooltip: 'All Nodes',
@@ -41,7 +41,7 @@ const getNavItems = (includeSensors, search) => {
       expanded: false
     },
     {
-      to: `nodes/all/sgt`,
+      to: `all-nodes/sgt`,
       icon:
         <Badge
           badgeContent={<FiberNewOutlined style={{fontSize: '1.5em'}} />}
@@ -55,15 +55,15 @@ const getNavItems = (includeSensors, search) => {
       tooltip: 'Sage Grande Testbed Nodes',
       minimizedLabel: 'SGT',
       indent: true,
-      parentId: 'nodes/all'
+      parentId: 'all-nodes'
     },
     {
-      to: `nodes/all/sage`,
+      to: `all-nodes/sage`,
       icon: <HardDriveIcon />,
       label: <>Sage</>,
       tooltip: 'Sage Nodes',
       indent: true,
-      parentId: 'nodes/all'
+      parentId: 'all-nodes'
     },
     // ------------------------------
     {
@@ -123,6 +123,7 @@ const getNavItems = (includeSensors, search) => {
         to: `sensors${search}`,
         icon: <SensorsRounded />,
         label: 'Sensors',
+        tooltip: 'All Sensors'
       }
     ]
   }

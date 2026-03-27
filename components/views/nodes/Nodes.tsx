@@ -91,7 +91,7 @@ export default function Nodes() {
     return Auth.isSignedIn && !!pathname.match(/\/user\/[^/]+\/nodes/)
   }, [pathname])
 
-  const all_nodes = pathname.startsWith('/nodes/all')
+  const all_nodes = pathname.startsWith('/all-nodes')
   const phase = params.get('phase') as BK.PhaseTabs
   const query = params.get('query') || ''
   const show_all = params.get('show_all') === 'true'
@@ -107,7 +107,7 @@ export default function Nodes() {
 
   const projectBasePath = useMemo(() => {
     if (isMyNodes) return `/user/${Auth.user}/nodes/project`
-    if (all_nodes) return '/nodes/all'
+    if (all_nodes) return '/all-nodes'
     return '/nodes/project'
   }, [isMyNodes, all_nodes])
 
@@ -124,6 +124,7 @@ export default function Nodes() {
   const [filtered, setFiltered] = useState<BK.NodeState[]>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(null)
   const [selected, setSelected] = useState<BK.NodeState[]>([])
+  const [metricsLoaded, setMetricsLoaded] = useState(false)
 
   // User project/access data (for all signed-in users)
   const [userVsns, setUserVsns] = useState<string[]>(null)
@@ -221,13 +222,10 @@ export default function Nodes() {
   useEffect(() => {
     if (isMyNodes && !myNodesReady) return // Wait for MyNodes data to be ready
 
-    let done = false
     let handle: NodeJS.Timeout
 
     const ping = async () => {
       handle = setTimeout(async () => {
-        if (done) return
-
         const metrics = await BH.getNodeData()
         const updatedData = enrichWithProjects(mergeMetrics(dataRef.current, metrics, null, null))
 
@@ -239,30 +237,36 @@ export default function Nodes() {
 
     setLoading(true)
 
-    const dataPromise = isMyNodes && userVsns
+    const nodesPromise = isMyNodes && userVsns
       ? getProjectNodes(sageProject).then(nodes => nodes.filter(node => userVsns.includes(node.vsn)))
       : getProjectNodes(sageProject)
 
-    Promise.all([dataPromise, BH.getNodeData()])
-      .then(([state, metrics]) => {
-        if (done) return
+    const dataPromise = all_nodes
+      ? nodesPromise.then(nodes => [nodes, []] as [BK.Node[], any[]])
+      : Promise.all([nodesPromise, BH.getNodeData()])
 
-        const allData = enrichWithProjects(mergeMetrics(state, metrics, null, null))
-        setData(allData)
-        setLastUpdate(new Date())
-        ping()
+    setMetricsLoaded(false)
+
+    dataPromise
+      .then(([state, metrics]) => {
+        setData(enrichWithProjects(mergeMetrics(state, metrics, null, null)))
+        setLoading(false)
+        if (!all_nodes) {
+          setLastUpdate(new Date())
+          setMetricsLoaded(true)
+          ping()
+        }
       })
       .catch(err => {
         console.log('err', err)
         setError(err)
+        setLoading(false)
       })
-      .finally(() => setLoading(false))
 
     return () => {
-      done = true
       clearTimeout(handle)
     }
-  }, [sageProject, isMyNodes, myNodesReady, userVsns, enrichWithProjects])
+  }, [sageProject, isMyNodes, myNodesReady, userVsns, enrichWithProjects, all_nodes])
 
 
   // Filter and update data whenever dependencies change
@@ -356,10 +360,9 @@ export default function Nodes() {
       computedColumns.splice(vsnIdx + 1, 0, projectsCol, accessCol)
     }
 
-    // Hide status column for all_nodes view
-    const statusIdx = computedColumns.findIndex(o => o.id === 'status')
-    if (statusIdx !== -1) {
-      computedColumns[statusIdx] = {...computedColumns[statusIdx], hide: all_nodes}
+    // Remove status and elapsedTimes columns entirely for all_nodes view
+    if (all_nodes) {
+      return computedColumns.filter(o => !['status', 'elapsedTimes'].includes(o.id))
     }
 
     return computedColumns
@@ -435,9 +438,12 @@ export default function Nodes() {
     <Root>
       <Overview className="flex">
         <MapContainer>
-          {filtered && !selected?.length &&
+          {filtered &&
               <Title>
-                {isMyNodes ? `My ${filtered.length} Node` : `${filtered.length} Node`}{filtered.length == 1 ? '' : 's'}
+                {selected.length
+                  ? `${selected.length} Selected Node${selected.length == 1 ? '' : 's'}`
+                  : `${isMyNodes ? 'My ' : ''}${filtered.length} Node${filtered.length == 1 ? '' : 's'}`
+                }
                 {' '}|{' '}
                 <small>
                   {lastUpdate?.toLocaleTimeString('en-US')}
@@ -493,28 +499,27 @@ export default function Nodes() {
                   }
                 </div> :
                 <span className="text-center">
-                  <i>
+                  {metricsLoaded && <i>
                     A recent issue has delayed node measurement publications and
                     reporting status, <br/> resulting in data transfer delays and
                     a "Not Reporting" status across all nodes.
                     <br/><br/>
                     Please check back later for updates. We thank you for your patience.
-                  </i>
-                  <br/>
-                  <br/>
-                  <small>
-                    Consider using the tab <Link to="/nodes/all">View All Nodes</Link>, or
-                    the checkbox ( <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={show_all}
-                          onChange={(evt) => handleShowAll(evt)}
-                        />
-                      }
-                      label="Show all"
-                      sx={{marginRight: 0}}
-                    /> ) to show nodes <br/> which are in maintenance, pending deployment, or not reporting.
-                  </small>
+                    <small>
+                      Consider using the tab <Link to="/nodes/all">View All Nodes</Link>, or
+                      the checkbox ( <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={show_all}
+                            onChange={(evt) => handleShowAll(evt)}
+                          />
+                        }
+                        label="Show all"
+                        sx={{marginRight: 0}}
+                      /> ) to show nodes <br/> which are in maintenance, pending deployment, or not reporting.
+                    </small>
+                  </i>}
+                  {metricsLoaded && <><br/><br/></>}
                 </span>
             }
             middleComponent={

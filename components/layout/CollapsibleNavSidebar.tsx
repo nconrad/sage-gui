@@ -292,7 +292,7 @@ export default function CollapsibleNavSidebar({
               key={item.to}
               to={item.to!}
               className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
-              end // use exact match for active state
+              end={!(minimized && item.expandable && !isExpanded)}
             >
               {item.expandable && !minimized && (
                 <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
@@ -328,7 +328,7 @@ export default function CollapsibleNavSidebar({
                 key={item.to}
                 to={item.to || ''}
                 className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
-                end
+                end={!(minimized && item.expandable && !isExpanded)}
               >
                 {item.expandable && !minimized && (
                   <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />

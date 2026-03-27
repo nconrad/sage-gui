@@ -84,7 +84,7 @@ const NavMenu = () => {
         />
       }
       <NavItem
-        label="Nodes"
+        label={Auth.isSignedIn ? 'My Nodes' : 'Nodes'}
         to={Auth.isSignedIn ? `/user/${Auth.user}/nodes` : '/nodes'}
       />
       <NavItem
@@ -236,9 +236,8 @@ export default function Sage() {
                     <Route path='/' element={<MetaRoute />}>
 
                       <Route path="/" element={<NodeTabs />}>
+                        <Route path="all-nodes/:sageProject?" element={<Nodes />} />
                         <Route path="nodes" element={<Nodes />} />
-                        <Route path="nodes/all" element={<Nodes />} />
-                        <Route path="nodes/all/:sageProject?" element={<Nodes />} />
                         <Route path="nodes/project/:sageProject?" element={<Nodes />} />
                         <Route path="nodes/:vsn" element={<Node />} />
                         <Route path="sensors" element={<SensorList project={project} />} />

@@ -45,7 +45,7 @@ const mapSettings = {
   */
 } as MapProps
 
-const fitBoundsPadding = {top: 35, bottom: 35, left: 35, right: 35}
+const fitBoundsPadding = {top: 35, bottom: 35, left: 60, right: 60}
 
 
 const getBBox = (coordinates) : [[number, number], [number, number]] => {
