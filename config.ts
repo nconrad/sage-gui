@@ -87,10 +87,11 @@ const config: Config = {
   scheduledMaintenance: {
     schedule: {type:  'weekly', day: 'sunday'},
     startTime: '19:00', // 7:00 PM CST
-    endTime: '20:00',   // 8:00 PM CST
+    endTime: '22:15',   // 10:15 PM CST
     message:
-      'Scheduled weekly maintenance on Sundays, 7:00 PM CST to 8:00 PM CST is currently in progress. ' +
-      'During this time, node measurements, system status, and the Data API may be unavailable. ',
+      'Scheduled weekly maintenance is currently underway (Sundays, 7:00 PM–10:15 PM CST). ' +
+      'During this window, node measurements, system status information, and the ' +
+      'Data API may be temporarily unavailable.',
     severity: 'warning'
   },
   /*

@@ -104,43 +104,38 @@ export default function DevAccess() {
 
   return (
     <Root>
-      <div className="flex items-center gap" style={{ marginBottom: '1.5rem' }}>
-        <h1 className="no-margin">Access Credentials</h1>
-      </div>
-
+      <h1>Access Credentials</h1>
       <p>
-        <b>Need access to nodes or protected files?</b>  Fill out
-        the form under the tab <Link to="/request-access">Request Access</Link>
-      </p><br/>
+        <b>Need access to nodes or protected files?</b>  Request access by filling out
+        the form under the tab <b><Link to="/request-access">Request Access</Link></b>.
+      </p>
 
 
       <CopyToken>
         <h2>Your Access Token</h2>
 
         {(isPermitted || isApproved) ?
-          <div className="flex items-center justify-between gap">
-            <div className="flex-grow">
+          <div className="flex items-center gap">
+            <div>
               <CodeBox actions={<CopyBtn tooltip="Copy token" onClick={handleCopyToken} />}>
-                **************************************
+                ********************************************
               </CodeBox>
             </div>
             <div>
-              <Alert severity="warning">
-                <b>Note:</b> Treat this token as sensitive information, similar to a username and password.
+              <Alert severity="warning" className="flex-grow">
+                Treat this token as sensitive information, similar to a username and password.<br/>
                 Please <b><a href={contactUs}>contact us</a></b> if you have any questions.
               </Alert>
             </div>
           </div>
           :
           <Alert severity="info">
-            <b>Note:</b> your account hasn't been approved or you do not have file access,
+            Your account hasn't been approved or you do not have protected file access,
             scheduling permissions, or developer access to any nodes.<br/>
             Once you have permissions, your access token will appear here<br/>
             <br/>
-            <b>Need developer and/or scheduling access?</b>  Please follow the rest of the
-            instructions on this page.<br/>
-            <b>Only need file access for protected data?</b> Please complete
-            the <b>"Request access"</b> section below.
+            <b>Need protected files, scheduling, or developer (SSH) access?</b> Request access by filling out
+            the form under the tab <b><Link to="/request-access">Request Access</Link></b>.<br/>
           </Alert>
         }
       </CopyToken>
@@ -149,7 +144,7 @@ export default function DevAccess() {
 
       {!canDev && <p>
         <Alert severity="info">
-          <b>Note:</b> you do not have dev access on any nodes.
+          It looks like you do not have dev access on any nodes.
           Please <b><Link to="/request-access">Request Access</Link></b> if
           you'd like developer access.
         </Alert>
@@ -202,20 +197,13 @@ export default function DevAccess() {
 
       <h2>Finish Setup for Node Access</h2>
 
-      <p>Once you've updated your SSH public key above, you'll need to do the following steps.</p>
+      <p>
+        Once you've requested access and have updated your SSH public key above, you'll
+         need to do the following steps.
+      </p>
 
-      <StepTitle icon="1" label="Request access" />
-      <Step>
-        <p>First, use the request access form to request access to the necessary nodes or files:</p>
-        <div style={{margin: '0 2rem 2rem 1rem'}}>
-          <Button variant="contained" component={Link} to="/request-access">
-            Request Access
-          </Button>
-        </div>
 
-      </Step>
-
-      <StepTitle icon="2" label="Update SSH config" />
+      <StepTitle icon="1" label="Update SSH config" />
       <Step>
         <p>
           Next, you'll need to update your <code>~/.ssh/config</code> file to include the following lines:
@@ -232,7 +220,7 @@ export default function DevAccess() {
             <br/>
             Host waggle-dev-node-*<br/>
             {'    '}ProxyCommand ssh waggle-dev-sshd connect-to-node $(echo %h | sed "s/waggle-dev-node-//" )<br/>
-            {'    '}User waggle<br/>
+            {'    '}User {Auth.user}<br/>
             {'    '}IdentityFile ~/.ssh/sage_key<br/>
             {'    '}IdentitiesOnly yes<br/>
             {'    '}StrictHostKeyChecking no<br/>
@@ -240,14 +228,14 @@ export default function DevAccess() {
         } />
       </Step>
 
-      <StepTitle icon="3" label="SSH to node" />
+      <StepTitle icon="2" label="SSH to node" />
       <Step>
         <p>
           You can access a specific node by its VSN, if you have permissions.
           For example, you can SSH to node V030 using:
         </p>
 
-        <Clipboard content={'ssh waggle-dev-node-V030'} />
+        <Clipboard content={`ssh waggle-dev-node-V030`} />
 
         <p>
           Note that upon first connecting to a node, please check that the fingerprint matches:

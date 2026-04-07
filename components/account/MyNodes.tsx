@@ -64,9 +64,9 @@ export default function MyNodes() {
 
   const emptyNotice = (
     <div>
-      Sorry, you do not have access to any nodes.<br/>
-      Please <b><a href={contactUs}>contact us</a></b> if
-      interested in collaborating with Sage.
+      It looks like you do not have access to any nodes.<br/>
+      Please <b><a href="/request-access">Request Access</a></b> or <b><a href={contactUs}>Contact Us</a></b> if
+      interested<br/> in using Sage or collaborating with us.
     </div>
   )
 

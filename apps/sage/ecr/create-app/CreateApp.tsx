@@ -7,12 +7,10 @@ import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import CheckIcon from '@mui/icons-material/Check'
-import LaunchIcon from '@mui/icons-material/LaunchRounded'
-import HelpIcon from '@mui/icons-material/HelpOutlineRounded'
-import TagIcon from '@mui/icons-material/LocalOfferOutlined'
-import CaretIcon from '@mui/icons-material/ExpandMoreRounded'
 
+import {
+  Check, LaunchRounded, HelpOutlineRounded, LocalOfferOutlined, ExpandMoreRounded
+} from '@mui/icons-material'
 
 import * as YAML from 'yaml'
 import { useSnackbar } from 'notistack'
@@ -25,20 +23,12 @@ import CheckBox from '/components/input/Checkbox'
 import Auth from '/components/auth/auth'
 import * as ECR from '/components/apis/ecr'
 import useIsApproved from '/components/hooks/useIsApproved'
+import useIsStaff from '/components/hooks/useIsStaff'
 
 import config from '/config'
 const { contactUs, docs } = config
 
 const user = Auth.user
-
-const devList = [
-  'nconrad',
-  'gemblerz',
-  'seanshahkarami',
-  'jswantek'
-]
-
-export const isDevUser = devList.includes(user)
 
 
 const GITHUB_API = 'https://api.github.com'
@@ -108,6 +98,7 @@ export default function CreateApp() {
   const [isValid, setIsValid] = useState(null)
 
   const {isApproved} = useIsApproved()
+  const {isStaff} = useIsStaff()
   const [isRegistering, setIsRegistering] = useState(false)
   const [isBuilding, setIsBuilding] = useState(false)
   const [error, setError] = useState(null)
@@ -330,9 +321,9 @@ export default function CreateApp() {
                   value={{id: branch, label: branch}}
                   headerText="Select a different branch"
                   ButtonComponent={
-                    <Button style={{marginLeft: 10}} startIcon={<TagIcon/>}>
+                    <Button style={{marginLeft: 10}} startIcon={<LocalOfferOutlined/>}>
                       {branch}
-                      <CaretIcon />
+                      <ExpandMoreRounded />
                     </Button>
                   }
                   disabled={gitCommit}
@@ -341,7 +332,7 @@ export default function CreateApp() {
             }
 
             {isValid &&
-              <CheckIcon className="success" />
+              <Check className="success" />
             }
           </div>
 
@@ -421,7 +412,7 @@ export default function CreateApp() {
               <b>Note:</b> You may register an application, but to enable builds of apps on
               our infrastructure, please <a href={contactUs} target="_blank" rel="noreferrer" >
                 contact us
-                <LaunchIcon className="external-link"/>
+                <LaunchRounded className="external-link"/>
               </a>.
             </p>
           }
@@ -434,26 +425,24 @@ export default function CreateApp() {
           <li>
             <a href={`${docs}/tutorials/edge-apps/intro-to-edge-apps`} target="_blank" rel="noreferrer" >
               Intro to edge apps
-              <LaunchIcon className="external-link"/>
+              <LaunchRounded className="external-link"/>
             </a>
           </li>
           <li>
             <a href={`${docs}/tutorials/edge-apps/creating-an-edge-app`} target="_blank" rel="noreferrer" >
               Creating an edge app
-              <LaunchIcon className="external-link"/>
+              <LaunchRounded className="external-link"/>
             </a>
           </li>
         </ul>
 
-        {isDevUser &&
+        {isStaff &&
           <DebugOptions>
             <h3 className="no-margin">
               Debugging
               <sup>
-                <Tooltip title={
-                  `These special debug mode options are only available to: ${devList.join(', ')}`
-                } placement="top">
-                  <HelpIcon fontSize="small" />
+                <Tooltip title="These special debug mode options are only available to staff" placement="top">
+                  <HelpOutlineRounded fontSize="small" />
                 </Tooltip>
               </sup>
             </h3>

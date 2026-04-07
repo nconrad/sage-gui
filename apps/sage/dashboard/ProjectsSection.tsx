@@ -8,6 +8,9 @@ import TableSkeleton from '/components/table/TableSkeleton'
 import * as User from '/components/apis/user'
 import Auth from '/components/auth/auth'
 
+import config from '/config'
+const { contactUs } = config
+
 
 type ProjectsSectionProps = {
   projects: User.Project[]
@@ -59,7 +62,11 @@ export default function ProjectsSection({ projects }: ProjectsSectionProps) {
         ) : (
           <EmptyState>
             <EmptyIcon><WorkOutline /></EmptyIcon>
-            <p>You're not part of any projects yet</p>
+            <div>
+              It looks like you do not have access to any projects.<br/>
+              Please <b><a href="/request-access">Request Access</a></b> or <b><a href={contactUs}>Contact Us</a></b> if
+              interested<br/> in using Sage or collaborating with us.
+            </div>
           </EmptyState>
         )}
       </Card>

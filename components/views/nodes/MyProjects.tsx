@@ -88,11 +88,13 @@ export default function MyProjects() {
             enableSorting
             columns={columns}
             rows={data}
-            emptyNotice={<div>
-              You are not part of any projects.<br/>
-              Please <b><a href={contactUs}>contact us</a></b> if
-              interested in collaborating with Sage.
-            </div>}
+            emptyNotice={
+              <div>
+              It looks like you do not have access to any projects.<br/>
+              Please <b><a href="/request-access">Request Access</a></b> or <b><a href={contactUs}>Contact Us</a></b> if
+              interested<br/> in collaborating with Sage.
+              </div>
+            }
           />
         </>
       }

@@ -7,7 +7,7 @@ import {
   Tooltip, Divider as MuiDivider, Alert, Collapse,
   DividerProps,
 } from '@mui/material'
-import { Add, DragIndicator, HelpOutline, ExpandMore, ExpandLess } from '@mui/icons-material'
+import { Add, DragIndicator, HelpOutlineRounded, ExpandMore, ExpandLess } from '@mui/icons-material'
 
 import Checkbox from '/components/input/Checkbox'
 import { Step, StepTitle } from '/components/layout/FormLayout'
@@ -178,7 +178,7 @@ function HelpText({ title }: { title: React.ReactNode }) {
           userSelect: 'none',
         }}
       >
-        <HelpOutline sx={{ fontSize: '1.1rem' }} />
+        <HelpOutlineRounded sx={{ fontSize: '1.1rem' }} />
         {open
           ? <ExpandLess sx={{ fontSize: '0.9rem' }} />
           : <ExpandMore sx={{ fontSize: '0.9rem' }} />
@@ -260,7 +260,6 @@ export default function ProjectForm() {
   useEffect(() => {
     listUserProjects()
       .then(data => {
-        console.log(data)
         setFormSpec({ projects: data })
       })
       .catch(err => {
@@ -287,7 +286,6 @@ export default function ProjectForm() {
       })
 
     getNodes().then(nodes => {
-      console.log('nodes', nodes)
       setNodes(nodes)
     }).catch(err => {
       console.error('Error fetching nodes:', err)
@@ -427,27 +425,39 @@ export default function ProjectForm() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="no-margin">Sage Access Request</h1>
           {isStaff &&
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="outlined" size="small"
-                onClick={() => {
-                  const sampleVsns = new Set(sampleFormData.selected_nodes.map(n => n.vsn))
-                  const matchedNodes = nodes.filter(n => sampleVsns.has((n as any).vsn))
-                  setFormData({ ...sampleFormData, selected_nodes: matchedNodes })
-                  setReqType(sampleReqType)
-                }}
-              >
-                Fill sample application
-              </Button>
-              <Button variant="outlined" size="small"
-                onClick={() => {
-                  const sampleVsns = new Set(sampleDownloadFormData.selected_nodes.map(n => n.vsn))
-                  const matchedNodes = nodes.filter(n => sampleVsns.has((n as any).vsn))
-                  setFormData({ ...sampleDownloadFormData, selected_nodes: matchedNodes })
-                  setReqType(sampleDownloadReqType)
-                }}
-              >
-                Fill sample download request
-              </Button>
+            <div>
+              <div>
+                <h3>
+                  Examples
+                  <sup>
+                    <Tooltip title="These special debug mode options are only shown for staff" placement="top">
+                      <HelpOutlineRounded fontSize="small" />
+                    </Tooltip>
+                  </sup>
+                </h3>
+                <div className="flex gap">
+                  <Button variant="outlined" size="small"
+                    onClick={() => {
+                      const sampleVsns = new Set(sampleFormData.selected_nodes.map(n => n.vsn))
+                      const matchedNodes = nodes.filter(n => sampleVsns.has((n as any).vsn))
+                      setFormData({ ...sampleFormData, selected_nodes: matchedNodes })
+                      setReqType(sampleReqType)
+                    }}
+                  >
+                    Fill sample application
+                  </Button>
+                  <Button variant="outlined" size="small"
+                    onClick={() => {
+                      const sampleVsns = new Set(sampleDownloadFormData.selected_nodes.map(n => n.vsn))
+                      const matchedNodes = nodes.filter(n => sampleVsns.has((n as any).vsn))
+                      setFormData({ ...sampleDownloadFormData, selected_nodes: matchedNodes })
+                      setReqType(sampleDownloadReqType)
+                    }}
+                  >
+                    Fill sample download request
+                  </Button>
+                </div>
+              </div>
             </div>
           }
         </div>
@@ -467,7 +477,7 @@ export default function ProjectForm() {
               label="Request access to specific nodes or projects" />
             {/* <FormControlLabel value="new" control={<Radio />} label="Request the start of a new project" /> */}
             <FormControlLabel value="file_access" control={<Radio />}
-              label="Request access to protected data sets" />
+              label="Request access to protected data sets (files, images, audio, etc.)" />
             {/* <FormControlLabel value="renew" control={<Radio />} label="Restore expired access/permissions" /> */}
           </RadioGroup>
         </Step>
@@ -643,7 +653,7 @@ export default function ProjectForm() {
                       <FormControlLabel
                         control={<Checkbox name="file_access" checked={formData.file_access}
                           onChange={handle_checkbox_change} />}
-                        label="File Access (Downloading/viewing protected data sets)"
+                        label="File Access (downloading/viewing protected data sets)"
                       />
                     </div>
                     {showValidation && !formData.running_apps && !formData.shell_access && !formData.file_access &&
@@ -970,7 +980,10 @@ export default function ProjectForm() {
                 />
 
                 <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                  Are you interested in using HPC (<a href="https://nairrpilot.org">NAIRR Pilot</a>) resources
+                  Are you interested in using HPC
+                  (<a href="https://nairrpilot.org" target="_blank" rel="noopener noreferrer">
+                    NAIRR Pilot
+                  </a>) resources
                   in addition to Sage?
                 </Typography>
                 <RadioGroup

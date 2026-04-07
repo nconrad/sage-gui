@@ -9,8 +9,8 @@ import MenuItem from '@mui/material/MenuItem'
 
 import { AppMeta } from '/components/apis/ecr'
 import Auth from '/components/auth/auth'
+import useIsStaff from '/components/hooks/useIsStaff'
 
-import isDevUser from './ConfigForm'
 const user = Auth.user
 
 
@@ -22,6 +22,7 @@ type Props = {
 export default function ConfigForm(props: Props) {
   const {form, onChange} = props
 
+  const { isStaff } = useIsStaff()
   const [isValid, setIsValid] = useState<boolean>(true)
 
   const handleNameChange = (evt) => {
@@ -45,7 +46,7 @@ export default function ConfigForm(props: Props) {
             label="Namespace *"
           >
             <MenuItem value={user}>{user}</MenuItem>
-            {isDevUser && <MenuItem value="waggle">waggle</MenuItem>}
+            {isStaff && <MenuItem value="waggle">waggle</MenuItem>}
           </Select>
         </FormControl>
         <Slash>&nbsp;/&nbsp;</Slash>
