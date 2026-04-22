@@ -1,42 +1,125 @@
 
-import { useEffect, useState, memo } from 'react'
-import styled from 'styled-components'
+import { useEffect, useState, memo, useRef, useMemo, type ReactNode, type SyntheticEvent } from 'react'
+import { styled, alpha } from '@mui/material/styles'
 
 import { type Task } from './Assistant'
-import * as BH from '/components/apis/beehive'
-import { Accordion, AccordionDetails, AccordionSummary, Typography } from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary, Box, Chip, Paper, Typography } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ObjectRenderer from './ObjectRenderer'
+import TypingMarkdown from './TypingMarkdown'
+import { useLogger } from './AssistLogger'
 
 import Bee from 'url:./bee.gif'
 import { sortResponses } from './sgUtils'
 import { relativeTime } from '/components/utils/units'
+import { useProgress } from '/components/progress/ProgressProvider'
 
+import { type ParsedRecord, type SchedulerStatus, getFeedSource, setupEventSource } from './edgerunner-api'
+import {
+  loadFeedHistory,
+  setupSchedulerStatus,
+  getNextRunTime,
+  toDateFromTimestamp
+} from './edgerunner-api'
 
-type ParsedRecord = BH.Record | (BH.Record & {value: {query: string, answer}})
+const PROMPT_OVERLAY_HEIGHT = 300
+const PROMPT_BOTTOM_OFFSET = 0
+const PROMPT_CONTAINER_HEIGHT = 220
+const RESPONSE_TYPING_INTERVAL_MS = 30
+const RESPONSE_TYPING_FADE_MS = 180
 
 type ResponseProps = {
   record: ParsedRecord
   showImage?: boolean
+  enableTyping?: boolean
+  timestampTick?: number
 }
 
-function Response(props: ResponseProps) {
+const getStreamPrompt = (record: ParsedRecord): string => {
+  const valueObj = typeof record.value == 'object' && record.value ? record.value as {[key: string]: unknown} : {}
+  const metaObj = record.meta as {[key: string]: unknown} | undefined
+  const recordObj = record as unknown as {[key: string]: unknown}
+
+  const promptCandidate =
+    valueObj.query ||
+    valueObj.prompt ||
+    valueObj.question ||
+    valueObj.input ||
+    metaObj?.query ||
+    metaObj?.prompt ||
+    recordObj.query ||
+    recordObj.prompt
+
+  return typeof promptCandidate == 'string' ? promptCandidate : ''
+}
+
+const getTimeUntil = (nextRunTime: Date): string => {
+  const diffMs = nextRunTime.getTime() - Date.now()
+
+  if (diffMs <= 0) {
+    return 'waiting...'
+  }
+
+  const totalSeconds = Math.ceil(diffMs / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours && minutes) {
+    return `in ${hours}h ${minutes}m ${seconds}s`
+  }
+
+  if (hours) {
+    return `in ${hours}h ${minutes}m ${seconds}s`
+  }
+
+  if (minutes) {
+    return `in ${minutes}m ${seconds}s`
+  }
+
+  return `in ${seconds}s`
+}
+
+const getRecordKey = (record: ParsedRecord, index: number): string => {
+  const meta = record.meta as {vsn?: string, node?: string, task?: string} | undefined
+  const timestamp = String(record.timestamp || '')
+  const vsn = meta?.vsn || meta?.node || 'unknown'
+  const task = meta?.task || 'task'
+
+  return `${vsn}-${task}-${timestamp}-${index}`
+}
+
+const Response = memo(function Response(props: ResponseProps) {
   const {record, showImage} = props
   const {value} = record
+  const enableTyping = !!props.enableTyping
+  const timestampTick = props.timestampTick || 0
 
-  const [expanded, setExpanded] = useState<boolean>(showImage)
+  const [expanded, setExpanded] = useState<boolean>(!!showImage)
 
-  const handleChange = (_, open) => {
+  const handleChange = (_: SyntheticEvent, open: boolean) => {
     setExpanded(open)
   }
 
-  let ele = 'loading...'
+
+  let ele: ReactNode = 'loading...'
   if (typeof value == 'object' && value) {
+    const markdownOutput = (value as {output?: string}).output || ''
+    const responsePrompt = getStreamPrompt(record)
+
     ele = <div>
-      <p className="font-medium no-margin">
-        {value.answer}
-      </p>
-      <span className="muted text-xs">{relativeTime(record.timestamp)}</span>
+      {responsePrompt &&
+        <PromptBubble>
+          {responsePrompt}
+        </PromptBubble>
+      }
+      <TypingMarkdown
+        markdownOutput={markdownOutput}
+        enableTyping={enableTyping}
+        typingIntervalMs={RESPONSE_TYPING_INTERVAL_MS}
+        fadeInDurationMs={RESPONSE_TYPING_FADE_MS}
+      />
+      <span className="muted text-xs">{relativeTime(record.timestamp)}{timestampTick < 0 ? '' : ''}</span>
     </div>
   } else if (typeof value == 'string' && value.includes('https://')) {
     ele =
@@ -61,123 +144,236 @@ function Response(props: ResponseProps) {
       {ele}
     </div>
   )
-}
+}, (prev, next) => {
+  return prev.record === next.record &&
+    prev.showImage == next.showImage &&
+    prev.enableTyping == next.enableTyping &&
+    prev.timestampTick == next.timestampTick
+})
 
 
 type Props = {
   tasks: Task[]
   isRunning: boolean
+  pendingPrompt?: string
+  onClearPending?: () => void
 }
 
 export default memo(function Feed(props: Props) {
-  const {tasks, isRunning} = props
+  const {tasks, isRunning, pendingPrompt, onClearPending} = props
+  const currentTaskPrompt = pendingPrompt || tasks[0]?.prompt
 
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+  const historyCountRef = useRef<number>(-1)
 
+  const {setLoading} = useProgress()
+  const { log } = useLogger()
   const [data, setData] = useState<ParsedRecord[]>()
+  const [feedError, setFeedError] = useState<string | null>(null)
+  const [schedulerStatus, setSchedulerStatus] = useState<SchedulerStatus | null>(null)
+  const [nextRunTime, setNextRunTime] = useState<Date | null>(null)
+  const [statusTick, setStatusTick] = useState(0)
+  const [responseTimestampTick, setResponseTimestampTick] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setStatusTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setResponseTimestampTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Memoize feed source to avoid recalculating
+  const feedSource = useMemo(() => getFeedSource(tasks[0]), [tasks])
+  const displayNextRunTime = useMemo(() => {
+    if (!isRunning) return null
+    const schedulerNextRun = toDateFromTimestamp(schedulerStatus?.nextRun)
+    return schedulerNextRun || nextRunTime
+  }, [isRunning, schedulerStatus?.nextRun, nextRunTime])
+  const latestResponseIndex = useMemo(
+    () => (data?.length ? data.length - 1 : -1),
+    [data?.length]
+  )
+
+  // Calculate next run time from schedule rule
+  useEffect(() => {
+    const scienceRules = tasks[0]?.fullJobSpec?.science_rules || []
+    let cronExpr: string | null = null
+
+    // Extract cron expression from scienceRules
+    for (const rule of scienceRules) {
+      const match = rule.match(/cronjob\("[^"]*",\s*"([^"]+)"\)/)
+      if (match?.[1]) {
+        cronExpr = match[1]
+        break
+      }
+    }
+
+    if (cronExpr) {
+      const nextRun = getNextRunTime(cronExpr)
+      setNextRunTime(nextRun)
+    }
+  }, [tasks, statusTick])
 
   // get history of data
   useEffect(() => {
-    if (!tasks.length) return
+    if (!feedSource) {
+      setFeedError(null)
+      return
+    }
 
-    const {fullJobSpec} = tasks[0]
-    const {nodes, plugins} = fullJobSpec
-    const vsns = Object.keys(nodes)
+    console.log('feedSource', feedSource)
 
-    // assume one app, for now
-    const task = plugins[0].name
+    // Load previous data
+    const fetchHistory = async () => {
+      setLoading(true)
+      setFeedError(null)
+      log('request', 'loadFeedHistory', feedSource)
 
-    // first, get previous data
-    BH.getData({
-      start: '-1d',
-      filter: {
-        vsn: vsns.join('|'),
-        task
+      try {
+        const data = await loadFeedHistory(feedSource)
+        historyCountRef.current = data.length
+        log('completion', `loadFeedHistory — ${data.length} records`)
+        setData(data)
+      } catch (err) {
+        console.error('Failed to fetch feed history', err)
+        log('error', 'loadFeedHistory failed', (err as Error)?.message)
+        setFeedError('Unable to load previous responses. Live updates may still continue.')
+      } finally {
+        setLoading(false)
       }
-    }).then(res => {
-      let d = res.sort(sortResponses)
+    }
 
-      d = res.map(obj => {
-        try {
-          obj.value = JSON.parse(obj.value as string)
-        } catch (e) {
-          // do nothing if not json
-        }
-
-        return obj
-      })
-
-      setData(d)
-    })
-  }, [tasks])
+    fetchHistory()
+  }, [setLoading, feedSource, log])
 
   // once we have historical data, start eventSource streaming
   useEffect(() => {
-    if (!tasks.length) return
+    if (!feedSource) return
 
-    const {fullJobSpec} = tasks[0]
-    const {nodes, plugins}= fullJobSpec
-    const vsns = Object.keys(nodes)
-
-    // assume one app, for now
-    const task = plugins[0].name
-
-    const eventSource = BH.createEventSource({vsn: vsns.join('|'), task})
-
-    eventSource.onerror = function(e) {
-      console.log('err', e)
-    }
-
-    eventSource.onmessage = function(e) {
-      const obj = JSON.parse(e.data)
-
-      try {
-        obj.value = JSON.parse(obj.value as string)
-      } catch (e) {
-        // do nothing if not json
+    setFeedError(null)
+    const eventSource = setupEventSource(feedSource, {
+      onMessage: (obj) => {
+        setFeedError(null)
+        log('completion', 'stream message', obj)
+        setData(prev => [...(prev || []), obj].sort(sortResponses))
+        onClearPending?.()
+      },
+      onError: () => {
+        log('error', 'stream disconnected')
+        setFeedError('Live feed disconnected. Trying to reconnect...')
       }
-
-      setData(prev => [...prev, obj].sort(sortResponses))
-    }
+    })
 
     return () => {
-      eventSource.close()
+      eventSource?.close()
     }
-  }, [data, tasks])
+  }, [feedSource, log, onClearPending])
 
+  // Watch scheduler status for task execution
+  useEffect(() => {
+    const vsn = feedSource?.vsns?.[0]
+    const task = feedSource?.task
+    if (!vsn || !task) return
+
+    const statusSource = setupSchedulerStatus(vsn, task, {
+      onStatus: (status) => {
+        log('info', `scheduler status: ${status.status}`, status)
+        setSchedulerStatus(status)
+      },
+      onError: () => {
+        log('error', 'scheduler status stream failed')
+        console.error('Failed to watch scheduler status')
+      }
+    })
+
+    return () => {
+      statusSource?.close()
+    }
+  }, [feedSource, log])
+
+  useEffect(() => {
+    if (!bottomRef.current) return
+    const raf = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({block: 'end'})
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [data, isRunning])
 
   return (
     <Root id="responses">
-      <div className="flex justify-end">
-        <PromptBubble>
-          {tasks[0]?.prompt}
-        </PromptBubble>
-      </div>
+      {feedError && <StickyErrorMsg role="alert">{feedError}</StickyErrorMsg>}
       {data?.map((record, i) => {
         return (
-          <div key={i} className="response">
-            <Response record={record} showImage={i > data.length - 5 * 2} />
+          <div key={getRecordKey(record, i)} className="response">
+            <Response
+              record={record}
+              showImage={i > data.length - 5 * 2}
+              enableTyping={i == latestResponseIndex && i >= historyCountRef.current}
+              timestampTick={responseTimestampTick}
+            />
           </div>
         )
       })
       }
-      {isRunning &&
-        <LoadingBee className="flex column items-center justify-center">
-          <img src={Bee} />
-          <span>Working on a response...</span>
-        </LoadingBee>
+      {displayNextRunTime && (
+        <Paper variant="outlined" sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.25, mb: 1.25 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {schedulerStatus &&
+            <>
+              <Typography variant="body2">Status:</Typography>
+              <Chip
+                size="small"
+                variant="outlined"
+                color={
+                  schedulerStatus.status === 'running' ? 'success'
+                    : schedulerStatus.status === 'scheduled' ? 'info' : 'default'
+                }
+                icon={<StatusDot status={schedulerStatus.status} />}
+                label={schedulerStatus.status.charAt(0).toUpperCase() + schedulerStatus.status.slice(1)}
+              />
+            </>
+            }
+          </Box>
+          <Typography variant="body2">
+            <strong>Next run:</strong> {displayNextRunTime.toLocaleTimeString()} ({getTimeUntil(displayNextRunTime)})
+          </Typography>
+        </Paper>
+      )}
+      {schedulerStatus?.status === 'running' &&
+        <>
+          {currentTaskPrompt &&
+            <PromptBubble>{currentTaskPrompt}</PromptBubble>
+          }
+          <LoadingBee className="flex column items-center justify-center">
+            <img src={Bee} />
+            <WaveText text="I'm working on a response..." />
+          </LoadingBee>
+        </>
       }
+      <BottomSpacer ref={bottomRef} />
+      <FeedOccluder />
     </Root>
   )
-}, (prev, next) => JSON.stringify(prev.tasks) == JSON.stringify(next.tasks))
+}, (prev, next) =>
+  JSON.stringify(prev.tasks) == JSON.stringify(next.tasks) &&
+  prev.isRunning == next.isRunning &&
+  prev.pendingPrompt == next.pendingPrompt &&
+  prev.onClearPending == next.onClearPending)
 
 
-const Root = styled.div`
+const Root = styled('div')`
+  width: 100%;
   max-width: 960px;
   padding: 40px;
-  margin-bottom: 170px;
+  padding-bottom: 24px;
+
+  position: relative;
 
   .response {
-    margin-bottom: 10px;
+    margin-bottom: 30px;
 
     img {
       max-width: 800px;
@@ -189,16 +385,117 @@ const Root = styled.div`
   }
 `
 
-const PromptBubble = styled.div`
+const FeedOccluder = styled('div')(({ theme }) => ({
+  position: 'sticky',
+  bottom: PROMPT_BOTTOM_OFFSET,
+  zIndex: 3,
+  pointerEvents: 'none',
+  height: PROMPT_OVERLAY_HEIGHT,
+  marginTop: -PROMPT_OVERLAY_HEIGHT,
+  background: `linear-gradient(
+    180deg,
+    ${alpha(theme.palette.background.default, 0)} 0%,
+    ${alpha(theme.palette.background.default, 0.2)} 30%,
+    ${alpha(theme.palette.background.default, 0.75)} 68%,
+    ${theme.palette.background.default} 100%
+  )`,
+}))
+
+const StickyErrorMsg = styled('div')`
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin-bottom: 10px;
+  background: #fce8e6;
+  color: #8a1c1c;
+  border: 1px solid #f2b8b5;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+`
+
+
+const StatusDot = styled('div')<{status: string}>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${(props) => {
+    switch (props.status) {
+      case 'running':
+        return '#338135'
+      case 'scheduled':
+        return '#2196f3'
+      default:
+        return '#9e9e9e'
+    }
+  }};
+  animation: ${(props) => props.status === 'running' ? 'pulse 1.5s ease-in-out infinite' : 'none'};
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`
+
+
+const BottomSpacer = styled('div')`
+  height: ${PROMPT_CONTAINER_HEIGHT}px;
+`
+
+const PromptBubble = styled('div')`
+  display: block;
+  width: fit-content;
+  max-width: 80%;
+  margin-left: auto;
   background: #c6b9ff;
-  padding: 5px;
-  margin: 1rem 0;
+  padding: 5px 10px;
+  margin: 2rem 0 .5rem auto;
   border-radius: 5px;
   font-weight: bold;
 `
 
-const LoadingBee = styled.div`
+const WaveTextRoot = styled('span')`
+  display: inline-block;
+
+  span {
+    display: inline-block;
+    animation: wave 1.2s ease-in-out infinite;
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+`
+
+const WaveText = ({ text }: { text: string }) => (
+  <WaveTextRoot>
+    {text.split('').map((char, i) => (
+      <span key={i} style={{ animationDelay: `${i * 0.04}s` }}>
+        {char === ' ' ? '\u00A0' : char}
+      </span>
+    ))}
+  </WaveTextRoot>
+)
+
+export { WaveText }
+
+const LoadingBee = styled('div')`
+  margin: .5rem 0 1.25rem;
+  opacity: 1;
+
+  span {
+    color: #5f6368;
+    font-weight: 500;
+  }
+
+
   img {
-    max-width: 20%;
+    max-width: 72px;
   }
 `

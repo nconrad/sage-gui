@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
 import { Card } from '/components/layout/Layout'
 import { type Task } from './Assistant'
-import { Divider, IconButton, Popover, Tooltip } from '@mui/material'
+import { Divider, IconButton, Popover, Tooltip, Typography } from '@mui/material'
 
 import {
   PauseCircleOutlineRounded, DeleteOutlineRounded, PlayCircleOutlineRounded,
@@ -12,6 +12,7 @@ import {
 }  from '@mui/icons-material'
 
 import * as ES from '/components/apis/ses'
+import config from '/config'
 
 import { useSnackbar } from 'notistack'
 import { useProgress } from '/components/progress/ProgressProvider'
@@ -19,11 +20,45 @@ import { useProgress } from '/components/progress/ProgressProvider'
 import { Highlight, themes } from 'prism-react-renderer'
 import { VSN } from '/components/apis/beekeeper'
 import NodeSelector from '../jobs/create-job/NodeSelector'
+import { modelOptions } from './models'
 
 type Props = {
   value: Task[]
   onChange: (tasks: Task[]) => void
   onEditNode: (node: VSN) => void
+}
+
+const getArgValue = (args?: string[], key = '--model'): string => {
+  if (!Array.isArray(args) || !args.length) {
+    return ''
+  }
+
+  const idx = args.indexOf(key)
+  if (idx >= 0 && idx + 1 < args.length) {
+    const value = args[idx + 1]
+    if (value && !value.startsWith('--')) {
+      return value
+    }
+  }
+
+  const inline = args.find((arg) => arg.startsWith(`${key}=`))
+  if (inline) {
+    return inline.slice(`${key}=`.length)
+  }
+
+  return ''
+}
+
+const getTaskModelLabel = (task: Task): string => {
+  const plugin = task.fullJobSpec?.plugins?.[0]
+  const args = plugin?.plugin_spec?.args || []
+  const selectedModel = getArgValue(args, '--model')
+
+  if (!selectedModel) {
+    return 'unknown model'
+  }
+
+  return modelOptions.find((option) => option.value == selectedModel)?.label || selectedModel
 }
 
 export default function Tasks(props: Props) {
@@ -138,57 +173,63 @@ export default function Tasks(props: Props) {
     <TaskList className="list-none no-padding">
       {tasks.map(task => {
         const {fullJobSpec} = task
+        if (!fullJobSpec) {
+          return null
+        }
 
         const node = Object.keys(fullJobSpec.nodes) // todo(nc): support multiple
+        const modelLabel = getTaskModelLabel(task)
 
         return (
           <li key={task.job_id}>
             <Card style={{paddingBottom: 5}}>
-              <div className="flex justify-between items-center">
-                <div>{task.prompt || 'No prompt specified'}</div>
+              <div className="flex justify-between items-start">
+                <div style={{flex: 1}}>
+                  <div>{task.prompt || 'No prompt specified'}</div>
+                  <div className="text-xs muted">Model: {modelLabel}</div>
+                </div>
 
                 <Tooltip title="Show task details..." placement="right">
-                  <IconButton onClick={handleOpenDetails} size="small" className="info-btn">
+                  <IconButton onClick={handleOpenDetails}
+                    size="small"
+                    className="info-btn"
+                  >
                     <InfoOutlined fontSize="small" sx={{cursor: 'pointer'}}/>
                   </IconButton>
                 </Tooltip>
-                <div className="flex column gap-2">
-                  <div>
-                    <Popover
-                      id={id}
-                      open={open}
-                      anchorEl={anchorEl}
-                      onClose={handleClose}
-                      anchorOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      sx={{height: '75%'}}
-                    >
-                      <Highlight theme={themes.dracula}
-                        language="json"
-                        code={JSON.stringify(fullJobSpec, null, 2)}
-                      >
-                        {({ className, style, tokens, getLineProps, getTokenProps }) => (
-                          <pre className={className} style={{...style, fontSize: '.85em'}}>
-                            {tokens.map((line, i) => (
-                              <div key={i} {...getLineProps({ line, key: i })}>
-                                {line.map((token, key) => (
-                                  <span key={key} {...getTokenProps({ token, key })} />
-                                ))}
-                              </div>
-                            ))}
-                          </pre>
-                        )}
-                      </Highlight>
-                    </Popover>
-                  </div>
-                </div>
               </div>
+              <Popover
+                id={id}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'left',
+                }}
+                sx={{height: '75%'}}
+              >
+                <Highlight theme={themes.dracula}
+                  language="json"
+                  code={JSON.stringify(fullJobSpec, null, 2)}
+                >
+                  {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                    <pre className={className} style={{...style, fontSize: '.85em'}}>
+                      {tokens.map((line, i) => (
+                        <div key={i} {...getLineProps({ line, key: i })}>
+                          {line.map((token, key) => (
+                            <span key={key} {...getTokenProps({ token, key })} />
+                          ))}
+                        </div>
+                      ))}
+                    </pre>
+                  )}
+                </Highlight>
+              </Popover>
               <br/>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap">
@@ -196,45 +237,49 @@ export default function Tasks(props: Props) {
                     {task.state}
                   </div>
 
-                  <Divider orientation="vertical" flexItem style={{margin: '5px' }} />
+                  <Divider orientation="vertical" flexItem sx={{ margin: '5px 0' }} />
 
                   <div className="flex items-center">
-
                     <a href={`/nodes/${node}`} target="_blank" rel="noreferrer">
                       {node}
                     </a>
                     <IconButton
                       onClick={handleOpenNodeSelector}
-                      size="small"
+
                     >
-                      <EditRounded />
+                      <EditRounded fontSize="small"/>
                     </IconButton>
-
-                    <Popover
-                      id={nodeSelectorId}
-                      open={openNodeSelector}
-                      anchorEl={selectorEl}
-                      onClose={handleCloseNodeSelector}
-                      anchorOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      sx={{height: '75%', width: '1200px'}}
-                    >
-                      <NodeSelectorContainer>
-
-                        <NodeSelector selected={[]} onSelected={() => { /* do nothing */ }} />
-                      </NodeSelectorContainer>
-                    </Popover>
                   </div>
+
 
                 </div>
 
-                <Divider orientation="vertical" flexItem style={{margin: '5px' }} />
+                <Popover
+                  id={nodeSelectorId}
+                  open={openNodeSelector}
+                  anchorEl={selectorEl}
+                  onClose={handleCloseNodeSelector}
+                  anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                  }}
+                  sx={{height: '75%', width: '1200px'}}
+                >
+                  <NodeSelectorContainer>
+                    <NodeSelector selected={[]} onSelected={() => { /* do nothing */ }} project="SGT" />
+                    <DisabledOverlay>
+                      <span className="overlay-message">
+                        <b>Selecting nodes other than H00F is currently disabled.</b><br/>
+                        Please <a href={config.contactUs} target="_blank" rel="noreferrer">contact us</a> if you are
+                        interested in allowing edge-runner on your node.
+                      </span>
+                    </DisabledOverlay>
+                  </NodeSelectorContainer>
+                </Popover>
 
                 <div>
                   {task.state != 'Running' &&
@@ -260,6 +305,7 @@ export default function Tasks(props: Props) {
                       </IconButton>
                     </Tooltip>
                   }
+                  {/*
                   <Tooltip title="Remove">
                     <IconButton
                       onClick={() => handleChange('remove', task)}
@@ -269,7 +315,7 @@ export default function Tasks(props: Props) {
                     >
                       <DeleteOutlineRounded />
                     </IconButton>
-                  </Tooltip>
+                  </Tooltip>*/}
                 </div>
 
               </div>
@@ -281,16 +327,15 @@ export default function Tasks(props: Props) {
   )
 }
 
-const TaskList = styled.ul`
+const TaskList = styled('ul')`
   li {
     margin: 0 0 10px 0;
     position: relative;
   }
 
   .info-btn {
-    position: absolute;
-    right: 5px;
-    top: 5px;
+    margin-top: -10px;
+    margin-right: -10px;
   }
 
   // todo: hover animations, etc
@@ -303,7 +348,35 @@ const TaskList = styled.ul`
   }
 `
 
-const NodeSelectorContainer = styled.div`
+const NodeSelectorContainer = styled('div')`
+  position: relative;
   margin: 20px;
   width: 1200px;
+`
+
+const DisabledOverlay = styled(Typography)`
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  font-size: 1.2rem;
+  color: #444;
+  backdrop-filter: blur(2px);
+  border-radius: 4px;
+  height: 100%;
+
+  .overlay-message {
+    max-width: 62ch;
+    line-height: 1.45;
+    white-space: normal;
+  }
+
+  .overlay-message a {
+    display: inline;
+    margin: 0 0.25ch;
+  }
 `

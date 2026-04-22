@@ -1,34 +1,38 @@
 
 export const defaultPrompt = 'Describe what you see in detail.'
 
-const getDefaultSpec = (prompt: string = defaultPrompt, vsn = 'W023') =>
+function getDefaultSpec({
+  prompt = defaultPrompt,
+  vsn = 'H00F',
+  every = '*/5 * * * *',
+  model = 'gemma4:e2b',
+  camera = 'rtsp://10.31.81.27:554/profile1/media.smp',
+  id = '',
+}) {
+  const taskName = id ? `edgerunner-demo-${id}` : 'edgerunner-demo'
+  return (
   `
-name: assistant-demo
+name: edgerunner-demo
+testname: this is just a test
 plugins:
-- name: moondream-demo
+- name: ${taskName}
   pluginSpec:
-    image: registry.sagecontinuum.org/seanshahkarami/moondream-demo:0.2.0
+    image: registry.sagecontinuum.org/seanshahkarami/ollama-hello-world:0.6.1
     args:
-    - --camera
-    - top_camera
     - --model
-    - moondream-0_5b-int8.mf.gz
+    - ${model}
+    - --prompt
     - ${prompt}
-    selector:
-      zone: core
-    resource:
-      limit.cpu: "2"
-      limit.memory: 4Gi
-      request.cpu: "2"
-      request.memory: 4Gi
-nodeTags: []
+    - ${camera}
 nodes:
-  ${vsn}: true
+  ${vsn}: null
 scienceRules:
-- 'schedule(moondream-demo): True'
+- 'schedule(${taskName}): cronjob("${taskName}", "${every}")'
 successCriteria:
-- WallClock(1d)
+- WallClock(1d) # required, but ignored
 `
+  )
+}
 
 
 export default getDefaultSpec
