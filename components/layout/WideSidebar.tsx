@@ -10,8 +10,8 @@ const Sidebar = styled('div')<{width: number}>`
   position: relative;
   display: flex;
   flex-direction: column;
-  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#2a2a2a' : 'rgb(255, 255, 255)'};
-  border-right: 1px solid ${({ theme }) => theme.palette.mode === 'dark' ? '#444' : '#ddd'};
+  background: ${({ theme }) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8f8f8'};
+  border-right: 1px solid ${props => props.theme.palette.divider};
   width: ${(props) => props.width}px;
   overflow-y: hidden;
   padding: 1rem;
@@ -31,12 +31,13 @@ const Resizer = styled('div')`
 type Props = {
   children: ReactNode,
   sx?: SxProps<Theme>
+  width?: number
 }
 
 const ResizableSidebar = (props: Props) => {
   const {children, sx} = props
 
-  const [width, setWidth] = useState(330)
+  const [width, setWidth] = useState(props.width || 275)
   const resizerRef = useRef(null)
   const sidebarRef = useRef(null)
 

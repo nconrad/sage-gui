@@ -1,4 +1,4 @@
-import styled from 'styled-components'
+import { styled } from '@mui/material/styles'
 import { IconButton, TextField } from '@mui/material'
 import { SendRounded, ClearRounded } from '@mui/icons-material'
 
@@ -38,13 +38,12 @@ export default function Prompt(props: Props) {
       >
         <SendRounded />
       </IconButton>
-
     </InputRoot>
   )
 }
 
 
-const InputRoot = styled.div`
+const InputRoot = styled('div')`
   margin: 25px 0 15px 0;
 `
 

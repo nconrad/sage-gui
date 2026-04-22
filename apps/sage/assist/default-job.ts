@@ -1,34 +1,36 @@
 
 export const defaultPrompt = 'Describe what you see in detail.'
 
-const getDefaultSpec = (prompt: string = defaultPrompt, vsn = 'W023') =>
+function getDefaultSpec({
+  prompt = defaultPrompt,
+  vsn = 'H00F',
+  every = '*/5 * * * *',
+  model = 'gemma4:e2b',
+  camera = 'rtsp://10.31.81.27:554/profile1/media.smp'
+}) {
+  return (
   `
-name: assistant-demo
+name: edgerunner-demo
 plugins:
-- name: moondream-demo
+- name: ollama-hello-world
   pluginSpec:
-    image: registry.sagecontinuum.org/seanshahkarami/moondream-demo:0.2.0
+    image: registry.sagecontinuum.org/seanshahkarami/ollama-hello-world:0.5.2
     args:
-    - --camera
-    - top_camera
     - --model
-    - moondream-0_5b-int8.mf.gz
+    - ${model}
+    - --prompt
     - ${prompt}
-    selector:
-      zone: core
-    resource:
-      limit.cpu: "2"
-      limit.memory: 4Gi
-      request.cpu: "2"
-      request.memory: 4Gi
+    - ${camera}
 nodeTags: []
 nodes:
-  ${vsn}: true
+  ${vsn}: null
 scienceRules:
-- 'schedule(moondream-demo): True'
+- 'schedule(ollama-hello-world): cronjob("ollama-hello-world", "${every}")'
 successCriteria:
 - WallClock(1d)
 `
+  )
+}
 
 
 export default getDefaultSpec
