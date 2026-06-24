@@ -138,7 +138,7 @@ export const NODE_STATUS_RANGE = '-30d'
 export function getNodeData() : Promise<Record[]> {
   const proms = [
     getData({start: NODE_STATUS_RANGE, filter: {name: 'sys.uptime'}, tail: 1}),
-    getData({start: '-6m', filter: {name: 'sys.gps.*'}, tail: 1}),
+    getData({start: '-6m', filter: {name: 'sys.gps.lon|sys.gps.lat|sys.gps.alt'}, tail: 1}),
   ]
 
   return Promise.all(proms)
@@ -150,7 +150,13 @@ export function getNodeData() : Promise<Record[]> {
 export function getNodeAdminData() : Promise<Record[]> {
   const proms = [
     getData({start: NODE_STATUS_RANGE, filter: {name: 'sys.uptime'}, tail: 1}),
-    getData({start: '-6m', filter: {name: 'sys.gps.*|sys.mem.*|sys.mem.*|sys.fs.*'}, tail: 1}),
+    getData({
+      start: '-6m',
+      filter: {
+        name: 'sys.gps.lon|sys.gps.lat|sys.gps.alt|sys.mem.*|sys.mem.*|sys.fs.*'
+      },
+      tail: 1
+    }),
     getData({start: '-6m', filter: {sensor: 'bme280', name: 'iio.in_temp_input'}, tail: 1})
   ]
 
@@ -655,6 +661,16 @@ export async function getUploadHourlyCounts(props: UploadHourlyCountProps = {}) 
 
   const data = await getData(params)
   return data
+    .filter((obj) => obj.name === 'upload_hourly_count')
+    .map((obj) => ({
+      timestamp: obj.timestamp,
+      value: Number(obj.value),
+      name: 'upload_hourly_count' as const,
+      meta: {
+        vsn: `${obj.meta.vsn || ''}`,
+        plugin: obj.meta.plugin || ''
+      }
+    }))
 }
 
 
