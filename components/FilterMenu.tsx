@@ -9,6 +9,7 @@ import CaretIcon from '@mui/icons-material/ExpandMoreRounded'
 import DoneIcon from '@mui/icons-material/Done'
 import Autocomplete, { autocompleteClasses } from '@mui/material/Autocomplete'
 import Button from '@mui/material/Button'
+import Badge from '@mui/material/Badge'
 import InputBase from '@mui/material/InputBase'
 import Box from '@mui/material/Box'
 
@@ -166,13 +167,27 @@ export default function FilterMenu(props: Props) {
 
   const open = Boolean(anchorEl)
   const id = open ? 'autocomplete-filter' : undefined
+  const selectedCount = Array.isArray(value)
+    ? value.length
+    : (value && typeof value == 'object' ? 1 : 0)
+  const isActive = selectedCount > 0
 
   return (
     <>
       <Box>
         {ButtonComponent ?
           cloneElement(ButtonComponent, {onClick: handleClick, disabled}) :
-          <Button size="medium" onClick={handleClick}>{label}<CaretIcon /></Button>
+          <Button size="medium" onClick={handleClick} endIcon={<CaretIcon />}>
+            <Badge
+              color="success"
+              variant="dot"
+              invisible={!isActive}
+              anchorOrigin={{vertical: 'top', horizontal: 'right'}}
+              sx={{'& .MuiBadge-badge': {top: 2, right: -4}}}
+            >
+              <span>{label}</span>
+            </Badge>
+          </Button>
         }
       </Box>
 

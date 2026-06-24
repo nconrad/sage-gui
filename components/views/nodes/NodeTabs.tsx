@@ -3,15 +3,13 @@ import type { Theme } from '@mui/material/styles'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import {
-  AccountCircleOutlined, GroupOutlined,
-  WorkOutline, SelectAll, SensorsRounded,
-  FiberNewOutlined, DashboardOutlined,
-  CheckCircleOutline, ListAlt, SettingsOutlined
+  AccountCircleOutlined, GroupOutlined, WorkOutline, SelectAll, SensorsRounded, FiberNewOutlined,
+  DashboardOutlined, CheckCircleOutline, ListAlt, SettingsOutlined, ViewTimelineOutlined
 } from '@mui/icons-material'
 
 import HardDriveIcon from '/assets/hard-drive.svg'
 import Auth from '/components/auth/auth'
-import CollapsibleNavSidebar, { NavItem } from '/components/layout/CollapsibleNavSidebar'
+import CollapsibleNavSidebar, { type NavItem } from '/components/layout/CollapsibleNavSidebar'
 
 const userBadgeSx = {
   '& .MuiBadge-badge': {
@@ -30,109 +28,72 @@ const userBadgeSx = {
   }
 }
 
-const getNavItems = (includeSensors: boolean, search: string) => {
-  let items: NavItem[] = [
+const badgeIcon = (icon: JSX.Element, badgeContent: JSX.Element, horizontal: 'left' | 'right' = 'right') =>
+  <Badge
+    badgeContent={badgeContent}
+    anchorOrigin={{vertical: 'top', horizontal}}
+    overlap="circular"
+    sx={userBadgeSx}
+  >
+    {icon}
+  </Badge>
+
+
+const getNavItems = (includeSensors: boolean, search: string): NavItem[] => {
+  const navItems: NavItem[] = [
     {
-      to: `all-nodes`,
+      to: 'all-nodes',
       icon: <SelectAll />,
       label: 'All Nodes',
-      expandable: true,
-      expanded: false
+      children: [
+        {
+          to: 'all-nodes/sgt',
+          icon: badgeIcon(<HardDriveIcon />, <FiberNewOutlined style={{fontSize: '1.5em'}} />),
+          label: 'SGT',
+          submenuLabel: 'Sage Grande',
+          submenuMetaLabel: 'SGT',
+          indent: true,
+        },
+        {
+          to: 'all-nodes/sage',
+          icon: <HardDriveIcon />,
+          label: 'Sage',
+          submenuLabel: 'Sage',
+          submenuMetaLabel: 'legacy',
+          indent: true,
+        },
+      ],
     },
     {
-      to: `all-nodes/sgt`,
-      icon:
-        <Badge
-          badgeContent={<FiberNewOutlined style={{fontSize: '1.5em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <HardDriveIcon />
-        </Badge>,
-      label: <>SGT</>,
-      submenuLabel: 'Sage Grande',
-      submenuMetaLabel: 'SGT',
-      minimizedLabel: 'SGT',
-      indent: true,
-      parentId: 'all-nodes'
-    },
-    {
-      to: `all-nodes/sage`,
-      icon: <HardDriveIcon />,
-      label: <>Sage</>,
-      submenuLabel: 'Sage',
-      submenuMetaLabel: 'legacy',
-      indent: true,
-      parentId: 'all-nodes'
-    },
-    // ------------------------------
-    {
-      to: `nodes`,
-      icon:
-        <Badge
-          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <ListAlt />
-        </Badge>,
+      to: 'nodes',
+      icon: badgeIcon(<ListAlt />, <CheckCircleOutline style={{fontSize: '1.2em'}} />, 'left'),
       label: 'Status',
       submenuLabel: 'All Status',
-      expandable: true,
-      expanded: true
+      children: [
+        {
+          to: 'nodes/project/sgt',
+          icon: badgeIcon(<HardDriveIcon />, <FiberNewOutlined style={{fontSize: '1.5em'}} />),
+          label: 'SGT',
+          submenuLabel: 'Sage Grande',
+          submenuMetaLabel: 'SGT',
+          indent: true,
+        },
+        {
+          to: 'nodes/project/sage',
+          icon: <HardDriveIcon />,
+          label: 'Sage',
+          submenuLabel: 'Sage',
+          submenuMetaLabel: 'legacy',
+          indent: true,
+        },
+      ],
     },
-    {
-      to: `nodes/project/sgt`,
-      icon:
-        <Badge
-          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <HardDriveIcon />
-        </Badge>,
-      label: <>SGT</>,
-      submenuLabel: 'Sage Grande',
-      submenuMetaLabel: 'SGT',
-      minimizedLabel: 'SGT',
-      indent: true,
-      parentId: 'nodes'
-    },
-    {
-      to: `nodes/project/sage`,
-      icon:
-        <Badge
-          badgeContent={<CheckCircleOutline style={{fontSize: '1.2em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'left'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <HardDriveIcon />
-        </Badge>,
-      label: <>Sage</>,
-      submenuLabel: 'Sage',
-      submenuMetaLabel: 'legacy',
-      indent: true,
-      parentId: 'nodes'
-    }
-  ]
-
-  if (includeSensors) {
-    items = [...items,
-      {
-        to: `sensors${search}`,
-        icon: <SensorsRounded />,
-        label: 'Sensors',
-        tooltip: 'All Sensors'
-      }
-    ]
-  }
-
-
-  items = [...items,
+    ...(includeSensors ? [{
+      to: `sensors${search}`,
+      icon: <SensorsRounded />,
+      label: 'Sensors',
+      tooltip: 'All Sensors'
+    }] : []),
     'divider',
     {
       to: 'my-dash',
@@ -144,54 +105,39 @@ const getNavItems = (includeSensors: boolean, search: string) => {
       to: 'my-nodes?show_all=true',
       icon: <AccountCircleOutlined />,
       label: 'My Nodes',
-      submenuLabel: 'Nodes',
-      expandable: true,
-      expanded: false
+      submenuLabel: 'All My Nodes',
+      ...(Auth.isSignedIn ? {
+        children: [
+          {
+            to: 'my-nodes/project/sgt?show_all=true',
+            icon: badgeIcon(<HardDriveIcon />, <AccountCircleOutlined style={{fontSize: '1.4em'}} />),
+            label: 'SGT',
+            submenuLabel: 'Sage Grande',
+            submenuMetaLabel: 'SGT',
+            tooltip: 'My SGT Nodes',
+            indent: true,
+          },
+          {
+            to: 'my-nodes/project/sage?show_all=true',
+            icon: badgeIcon(<HardDriveIcon />, <AccountCircleOutlined style={{fontSize: '1.4em'}} />),
+            label: 'Sage',
+            submenuLabel: 'Sage',
+            submenuMetaLabel: 'legacy',
+            tooltip: 'My Sage Nodes',
+            indent: true,
+          },
+          'divider',
+          {
+            to: 'my-nodes/sgt-status',
+            icon: <ViewTimelineOutlined fontSize="small"/>,
+            submenuMetaLabel: 'timeline',
+            label: 'Sage Grande Status',
+            indent: true,
+          },
+        ],
+      } : {}),
     },
-    {
-      to: 'my-nodes/project/sgt?show_all=true',
-      icon: (
-        <Badge
-          badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <HardDriveIcon />
-        </Badge>
-      ),
-      label: <>SGT</>,
-      submenuLabel: 'Sage Grande',
-      submenuMetaLabel: 'SGT',
-      tooltip: 'My SGT Nodes',
-      minimizedLabel: 'My SGT Nodes',
-      indent: true,
-      parentId: 'my-nodes',
-    },
-    {
-      to: 'my-nodes/project/sage?show_all=true',
-      icon: (
-        <Badge
-          badgeContent={<AccountCircleOutlined style={{fontSize: '1.4em'}} />}
-          anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-          overlap="circular"
-          sx={userBadgeSx}
-        >
-          <HardDriveIcon />
-        </Badge>
-      ),
-      label: <>Sage</>,
-      submenuLabel: 'Sage',
-      submenuMetaLabel: 'legacy',
-      tooltip: 'My Sage Nodes',
-      minimizedLabel: 'My Sage Nodes',
-      indent: true,
-      parentId: 'my-nodes',
-    },
-  ]
-
-  if (Auth.isSignedIn) {
-    items = [...items,
+    ...(Auth.isSignedIn ? [
       {
         to: 'my-projects',
         icon: <WorkOutline />,
@@ -204,10 +150,7 @@ const getNavItems = (includeSensors: boolean, search: string) => {
         label: 'Members',
         tooltip: 'My Teams'
       }
-    ]
-  }
-
-  items = [...items,
+    ] : []),
     {
       to: 'account/access',
       icon: <SettingsOutlined />,
@@ -217,13 +160,12 @@ const getNavItems = (includeSensors: boolean, search: string) => {
     }
   ]
 
-  return items
+  return navItems
 }
 
-
 type Props = {
-  includeSensors?: boolean // weather or not to include the sensors tab
-  isAdmin?: boolean        // show totals for all projects in admin view
+  includeSensors?: boolean
+  isAdmin?: boolean
 }
 
 export default function NodeTabs(props: Props) {
@@ -242,10 +184,7 @@ export default function NodeTabs(props: Props) {
         collapsible={false}
         submenuMode="popover"
         submenuTrigger="hover-or-click"
-        itemIdGenerator={(item) => {
-          if (item === 'divider') return ''
-          return item.to?.split('?')[0] || ''
-        }}
+        itemIdGenerator={(item) => item.to?.split('?')[0] || ''}
       />
       <Main>
         <Outlet />

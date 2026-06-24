@@ -250,6 +250,7 @@ export type FilterState = {
 export const initialState = {
   status: [],
   project: [],
+  partner: [],
   city: [],
   state: [],
   focus: [],

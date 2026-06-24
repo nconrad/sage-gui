@@ -9,7 +9,7 @@ import USStates from './us-states'
 import { getCarrierName } from './carrier-codes'
 
 import Auth from '../auth/auth'
-import { AccessPerm, listMyProjects } from './user'
+import { AccessPerm, listMyProjects, type MyProject } from './user'
 
 const PROJECT = settings.project
 
@@ -490,7 +490,7 @@ export async function getNodes(args?: GetNodeArgs) : Promise<Node[]> {
 
 export async function getUserNodesAndProjects(args?: GetNodeArgs) : Promise<{
   nodes: (Node & {access: AccessPerm[]})[],
-  projects: Project[]
+  projects: MyProject[]
 }> {
   const {vsns, project} = args || {}
 
@@ -506,13 +506,16 @@ export async function getUserNodesAndProjects(args?: GetNodeArgs) : Promise<{
   nodes = nodes.filter(o => myProjects.vsns.includes(o.vsn))
 
   // include "access" info for each node
-  const nodesWithAccess = nodes.map(n => ({
+  const nodesWithAccess: (Node & {access: AccessPerm[]})[] = nodes.map(n => ({
     ...n,
     access: myProjects.access[n.vsn] || []
   }))
 
   return {
-    nodes: nodesWithAccess.map(obj => _sanitizeMeta(obj)),
+    nodes: nodesWithAccess.map(obj => ({
+      ..._sanitizeMeta(obj),
+      access: obj.access
+    })),
     projects: myProjects.projects
   }
 }
@@ -595,11 +598,11 @@ function _sanitizeMeta(obj: Node) {
     hasStaticGPS: !!obj.gps_lat && !!obj.gps_lon,
     lat: obj.gps_lat,
     lng: obj.gps_lon,
-    modem_carrier_name: obj.modem_carrier ? getCarrierName(obj.modem_carrier) : null,
-    top_camera: obj.sensors.find(o => o.name == 'top_camera')?.hw_model,
-    bottom_camera: obj.sensors.find(o => o.name == 'bottom_camera')?.hw_model,
-    left_camera: obj.sensors.find(o => o.name == 'left_camera')?.hw_model,
-    right_camera: obj.sensors.find(o => o.name == 'right_camera')?.hw_model,
+    modem_carrier_name: obj.modem_carrier ? getCarrierName(obj.modem_carrier) : '',
+    top_camera: obj.sensors.find(o => o.name == 'top_camera')?.hw_model || '',
+    bottom_camera: obj.sensors.find(o => o.name == 'bottom_camera')?.hw_model || '',
+    left_camera: obj.sensors.find(o => o.name == 'left_camera')?.hw_model || '',
+    right_camera: obj.sensors.find(o => o.name == 'right_camera')?.hw_model || '',
     sensor: obj.sensors.map(o => o.hw_model),     // todo(nc) -- for filtering, but should remove/improve
     sensorCapabilities: uniq(obj.sensors.flatMap(o => o.capabilities))
   }

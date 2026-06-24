@@ -245,10 +245,8 @@ export default function Sage() {
 
                         <Route path="my-dash" element={<RequireAuth><Dashboard /></RequireAuth>} />
                         <Route path="my-nodes" element={<RequireAuth><Nodes /></RequireAuth>} />
-                        <Route
-                          path="my-nodes/project/:sageProject?"
-                          element={<RequireAuth><Nodes /></RequireAuth>}
-                        />
+                        <Route path="my-nodes/project/:sageProject?" element={<RequireAuth><Nodes /></RequireAuth>} />
+                        <Route path="my-nodes/sgt-status" element={<RequireAuth><Nodes /></RequireAuth>} />
                         <Route path="my-projects" element={<RequireAuth><MyProjects /></RequireAuth>} />
                         <Route path="my-teams" element={<RequireAuth><MyTeams /></RequireAuth>} />
                         <Route path="my-teams/:projectName" element={<RequireAuth><Members /></RequireAuth>} />

@@ -10,7 +10,7 @@ import {
   Tooltip
 } from '@mui/material'
 import { NavLink } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { type MouseEvent, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ArrowDropDown } from '@mui/icons-material'
 
 import { Sidebar } from '/components/layout/Layout'
@@ -272,6 +272,7 @@ export type NavItem = {
   to?: string
   icon: React.ReactNode
   label: string | React.ReactNode
+  children?: NavItem[]
   submenuLabel?: string | React.ReactNode
   submenuMetaLabel?: string | React.ReactNode
   tooltip?: string
@@ -279,7 +280,6 @@ export type NavItem = {
   divider?: boolean
   expandable?: boolean
   expanded?: boolean
-  parentId?: string
   minimizedLabel?: string
   pinBottom?: boolean
 } | 'divider'
@@ -296,7 +296,7 @@ type Props = {
   submenuMode?: 'inline' | 'popover'
   submenuTrigger?: 'hover' | 'click' | 'hover-or-click'
   header?: React.ReactNode
-  itemIdGenerator?: (item: NavItem) => string
+  itemIdGenerator?: (item: Exclude<NavItem, 'divider'>) => string
   onMinimizedChange?: (minimized: boolean) => void
 }
 
@@ -312,7 +312,7 @@ export default function CollapsibleNavSidebar({
   submenuMode = 'inline',
   submenuTrigger = 'hover',
   header,
-  itemIdGenerator = (item) => item !== 'divider' ? (item.to || '') : '',
+  itemIdGenerator = (item) => item.to || '',
   onMinimizedChange
 }: Props) {
   const [minimized, setMinimized] = useState(() => {
@@ -378,12 +378,7 @@ export default function CollapsibleNavSidebar({
     }, 120)
   }
 
-  const getItemId = (item: NavItem) => itemIdGenerator(item)
-
-  const getChildItems = (itemId: string) =>
-    navItems.filter((child): child is Exclude<NavItem, 'divider'> =>
-      child !== 'divider' && child.parentId === itemId
-    )
+  const getItemId = (item: Exclude<NavItem, 'divider'>) => itemIdGenerator(item)
 
   const openSubmenu = (itemId: string, anchorEl: HTMLElement) => {
     clearScheduledClose()
@@ -391,7 +386,7 @@ export default function CollapsibleNavSidebar({
   }
 
   const shouldUseSubmenu = (item: Exclude<NavItem, 'divider'>) =>
-    submenuMode === 'popover' && getChildItems(getItemId(item)).length > 0
+    submenuMode === 'popover' && Boolean(item.children?.length)
 
   const shouldOpenOnHover = submenuTrigger === 'hover' || submenuTrigger === 'hover-or-click'
   const shouldOpenOnClick = submenuTrigger === 'click' || submenuTrigger === 'hover-or-click'
@@ -399,7 +394,7 @@ export default function CollapsibleNavSidebar({
   const openSubmenuItem = navItems.find((item): item is Exclude<NavItem, 'divider'> =>
     item !== 'divider' && getItemId(item) === submenuState.itemId
   )
-  const openSubmenuItems = openSubmenuItem ? [openSubmenuItem, ...getChildItems(submenuState.itemId)] : []
+  const openSubmenuItems: NavItem[] = openSubmenuItem ? [openSubmenuItem, ...(openSubmenuItem.children || [])] : []
   const openSubmenuLabel =
     typeof openSubmenuItem?.label === 'string' ?
       openSubmenuItem.label :
@@ -428,45 +423,65 @@ export default function CollapsibleNavSidebar({
             return <Divider key={`divider-${index}`} sx={{margin: '10px 0'}} />
           }
 
-          if (submenuMode === 'popover' && item.parentId) {
-            return null
-          }
-
-          // Skip child items if parent is collapsed
-          if (submenuMode === 'inline' && item.parentId && !expandedItems[item.parentId]) {
-            return null
-          }
-
           const itemId = getItemId(item)
-          const isExpanded = expandedItems[itemId] ?? item.expanded
+          const hasChildren = Boolean(item.children?.length)
+          const isExpanded = expandedItems[itemId] ?? item.expanded ?? false
           const hasSubmenu = shouldUseSubmenu(item)
+          const canInlineExpand = submenuMode === 'inline' && hasChildren
+          const linkEnd = !hasSubmenu
 
           const itemContent = (
-            <Item
-              key={item.to}
-              to={item.to || ''}
-              className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
-              end={!(minimized && item.expandable && !isExpanded)}
-              onMouseEnter={hasSubmenu && shouldOpenOnHover ?
-                evt => openSubmenu(itemId, evt.currentTarget) :
-                undefined}
-              onMouseLeave={hasSubmenu && shouldOpenOnHover ? scheduleCloseSubmenu : undefined}
-              onClick={hasSubmenu && shouldOpenOnClick ? closeSubmenu : undefined}
-            >
-              {item.expandable && !minimized && !hasSubmenu && (
-                <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
-              )}
-              <div style={{
-                marginLeft: item.expandable && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
-              }} className="flex items-center">
-                {item.icon}
-              </div>
-              {!minimized ? (
-                <div className="nav-label" style={{ marginLeft: '.5rem' }}>{item.label}</div>
-              ) : (
-                <div className="minimized-label">{item.minimizedLabel || item.label}</div>
-              )}
-            </Item>
+            <>
+              <Item
+                key={item.to}
+                to={item.to || ''}
+                className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
+                end={linkEnd}
+                onMouseEnter={hasSubmenu && shouldOpenOnHover ?
+                  (evt: MouseEvent<HTMLElement>) => openSubmenu(itemId, evt.currentTarget) :
+                  undefined}
+                onMouseLeave={hasSubmenu && shouldOpenOnHover ? scheduleCloseSubmenu : undefined}
+                onClick={hasSubmenu && shouldOpenOnClick ? closeSubmenu : undefined}
+              >
+                {canInlineExpand && !minimized && !hasSubmenu && (
+                  <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
+                )}
+                <div style={{
+                  marginLeft: canInlineExpand && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
+                }} className="flex items-center">
+                  {item.icon}
+                </div>
+                {!minimized ? (
+                  <div className="nav-label" style={{ marginLeft: '.5rem' }}>{item.label}</div>
+                ) : (
+                  <div className="minimized-label">{item.minimizedLabel || item.label}</div>
+                )}
+              </Item>
+
+              {submenuMode === 'inline' && hasChildren && isExpanded && item.children?.map((child, childIndex) => {
+                if (child === 'divider') {
+                  return <Divider key={`inline-divider-${itemId}-${childIndex}`} sx={{ margin: '8px 0 8px 16px' }} />
+                }
+
+                return (
+                  <Item
+                    key={child.to}
+                    to={child.to || ''}
+                    className={`flex items-center ${minimized ? 'gap minimized' : ''} indent`}
+                    end
+                  >
+                    <div style={{ marginLeft: minimized ? '0' : '1.3rem' }} className="flex items-center">
+                      {child.icon}
+                    </div>
+                    {!minimized ? (
+                      <div className="nav-label" style={{ marginLeft: '.5rem' }}>{child.label}</div>
+                    ) : (
+                      <div className="minimized-label">{child.minimizedLabel || child.label}</div>
+                    )}
+                  </Item>
+                )
+              })}
+            </>
           )
 
           return (
@@ -488,34 +503,68 @@ export default function CollapsibleNavSidebar({
           {navItems.filter(item => item !== 'divider' && item.pinBottom).map((item) => {
             if (item === 'divider') return null
             const itemId = itemIdGenerator(item)
-            const isExpanded = expandedItems[itemId] ?? item.expanded
+            const hasChildren = Boolean(item.children?.length)
+            const isExpanded = expandedItems[itemId] ?? item.expanded ?? false
             const hasSubmenu = shouldUseSubmenu(item)
+            const canInlineExpand = submenuMode === 'inline' && hasChildren
+            const linkEnd = !hasSubmenu
             const itemContent = (
-              <Item
-                key={item.to}
-                to={item.to || ''}
-                className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
-                end={!(minimized && item.expandable && !isExpanded)}
-                onMouseEnter={hasSubmenu && shouldOpenOnHover ?
-                  evt => openSubmenu(itemId, evt.currentTarget) :
-                  undefined}
-                onMouseLeave={hasSubmenu && shouldOpenOnHover ? scheduleCloseSubmenu : undefined}
-                onClick={hasSubmenu && shouldOpenOnClick ? closeSubmenu : undefined}
-              >
-                {item.expandable && !minimized && !hasSubmenu && (
-                  <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
-                )}
-                <div style={{
-                  marginLeft: item.expandable && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
-                }} className="flex items-center">
-                  {item.icon}
-                </div>
-                {!minimized ? (
-                  <div className="nav-label" style={{ marginLeft: '.5rem' }}>{item.label}</div>
-                ) : (
-                  <div className="minimized-label">{item.minimizedLabel || item.label}</div>
-                )}
-              </Item>
+              <>
+                <Item
+                  key={item.to}
+                  to={item.to || ''}
+                  className={`flex items-center ${minimized ? 'gap minimized' : ''}${item.indent ? ' indent' : ''}`}
+                  end={linkEnd}
+                  onMouseEnter={hasSubmenu && shouldOpenOnHover ?
+                    (evt: MouseEvent<HTMLElement>) => openSubmenu(itemId, evt.currentTarget) :
+                    undefined}
+                  onMouseLeave={hasSubmenu && shouldOpenOnHover ? scheduleCloseSubmenu : undefined}
+                  onClick={hasSubmenu && shouldOpenOnClick ? closeSubmenu : undefined}
+                >
+                  {canInlineExpand && !minimized && !hasSubmenu && (
+                    <ExpandButton expanded={isExpanded} onToggle={() => toggleExpanded(itemId)} />
+                  )}
+                  <div style={{
+                    marginLeft: canInlineExpand && !minimized ? '1.3rem' : minimized ? '0' : '1.3rem',
+                  }} className="flex items-center">
+                    {item.icon}
+                  </div>
+                  {!minimized ? (
+                    <div className="nav-label" style={{ marginLeft: '.5rem' }}>{item.label}</div>
+                  ) : (
+                    <div className="minimized-label">{item.minimizedLabel || item.label}</div>
+                  )}
+                </Item>
+
+                {submenuMode === 'inline' && hasChildren && isExpanded && item.children?.map((child, childIndex) => {
+                  if (child === 'divider') {
+                    return (
+                      <Divider
+                        key={`inline-divider-bottom-${itemId}-${childIndex}`}
+                        sx={{ margin: '8px 0 8px 16px' }}
+                      />
+                    )
+                  }
+
+                  return (
+                    <Item
+                      key={child.to}
+                      to={child.to || ''}
+                      className={`flex items-center ${minimized ? 'gap minimized' : ''} indent`}
+                      end
+                    >
+                      <div style={{ marginLeft: minimized ? '0' : '1.3rem' }} className="flex items-center">
+                        {child.icon}
+                      </div>
+                      {!minimized ? (
+                        <div className="nav-label" style={{ marginLeft: '.5rem' }}>{child.label}</div>
+                      ) : (
+                        <div className="minimized-label">{child.minimizedLabel || child.label}</div>
+                      )}
+                    </Item>
+                  )
+                })}
+              </>
             )
             return (
               hasSubmenu ?
@@ -551,23 +600,29 @@ export default function CollapsibleNavSidebar({
             <SubmenuList
               subheader={<SubmenuHeader disableSticky>{openSubmenuLabel}</SubmenuHeader>}
             >
-              {openSubmenuItems.map((item) => (
-                <SubmenuLink
-                  key={item.to}
-                  to={item.to || ''}
-                  end
-                  onClick={closeSubmenu}
-                  className={item.parentId ? 'submenu-child' : 'submenu-parent'}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>
-                  <SubmenuLabel>
-                    <SubmenuLabelMain>{item.submenuLabel || item.label}</SubmenuLabelMain>
-                    {item.submenuMetaLabel && (
-                      <SubmenuLabelMeta>{item.submenuMetaLabel}</SubmenuLabelMeta>
-                    )}
-                  </SubmenuLabel>
-                </SubmenuLink>
-              ))}
+              {openSubmenuItems.map((item, index) => {
+                if (item === 'divider') {
+                  return <Divider key={`submenu-divider-${index}`} sx={{ my: 0.75 }} />
+                }
+
+                return (
+                  <SubmenuLink
+                    key={item.to}
+                    to={item.to || ''}
+                    end
+                    onClick={closeSubmenu}
+                    className={item === openSubmenuItem ? 'submenu-parent' : 'submenu-child'}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>
+                    <SubmenuLabel>
+                      <SubmenuLabelMain>{item.submenuLabel || item.label}</SubmenuLabelMain>
+                      {item.submenuMetaLabel && (
+                        <SubmenuLabelMeta>{item.submenuMetaLabel}</SubmenuLabelMeta>
+                      )}
+                    </SubmenuLabel>
+                  </SubmenuLink>
+                )
+              })}
             </SubmenuList>
           </SubmenuPaper>
         </ClickAwayListener>

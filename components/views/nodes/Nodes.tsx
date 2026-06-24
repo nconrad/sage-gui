@@ -1,14 +1,12 @@
 /* eslint-disable react/display-name */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useMatch } from 'react-router-dom'
+import SGTDeployments from '/components/views/sgt-deployments/SGTDeployments'
 import { styled } from '@mui/material'
 import { useSearchParams, useLocation, Link, useParams, useNavigate } from 'react-router-dom'
 
-import Button from '@mui/material/Button'
-import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import Tooltip from '@mui/material/Tooltip'
-import UndoIcon from '@mui/icons-material/UndoRounded'
 
 import { uniqBy } from 'lodash'
 
@@ -21,9 +19,7 @@ import {
 } from '/components/views/statusDataUtils'
 
 import Table, { type Column } from '/components/table/Table'
-import FilterMenu from '/components/FilterMenu'
 import MapGL from '/components/Map'
-import QueryViewer from '/components/QueryViewer'
 import { useProgress } from '/components/progress/ProgressProvider'
 import { queryData } from '/components/data/queryData'
 import { useIsSuper } from '/components/auth/PermissionProvider'
@@ -36,10 +32,13 @@ import Auth from '/components/auth/auth'
 import settings from '/components/settings'
 import Checkbox from '/components/input/Checkbox'
 import { vsnLinkWithEdit } from './nodeFormatters'
+import NodesFilterCtrls from './NodesFilterCtrls'
 import SageProjectFilter from '/apps/sage/dashboard/SageProjectFilter'
 
 
 const TIME_OUT = 5000
+
+const SGT_DEFAULT_LABELS = ['phase', 'site_id', 'vsn', 'partner']
 
 const getOptions = (data: object[], field: string) : Option[] =>
   [...new Set(data.map(obj => obj[field])) ]
@@ -63,11 +62,7 @@ function getProjectNodes(projectParam?: string) {
       if (vsns)
         data = data.filter(o => settings.vsns.includes(o.vsn))
 
-      if (project.includes('SAGE')) {
-        data = data.filter(obj =>
-          ['Deployed', 'Awaiting Deployment', 'Maintenance'].includes(obj.phase)
-        )
-      }
+
 
       return data
     })
@@ -85,6 +80,7 @@ export default function Nodes() {
   const {pathname} = useLocation()
   const navigate = useNavigate()
   const {isSuper} = useIsSuper()
+  const showSGTDeployments = useMatch('/my-nodes/sgt-status')
 
   // Derived state from URL/pathname
   const isMyNodes = useMemo(() => {
@@ -106,17 +102,41 @@ export default function Nodes() {
     return 'all'
   }, [sageProject])
 
+  // Always fetch SAGE+SGT together for project-filtered views so per-project
+  // counts can be computed client-side regardless of selected project route.
+  const projectNodesQuery = useMemo(() => {
+    if (projectFilter === 'all') return sageProject
+    return 'SGT,SAGE'
+  }, [projectFilter, sageProject])
+
   const projectBasePath = useMemo(() => {
     if (isMyNodes) return '/my-nodes/project'
     if (all_nodes) return '/all-nodes'
     return '/nodes/project'
   }, [isMyNodes, all_nodes])
 
+  const projectRootPath = useMemo(() => {
+    if (isMyNodes) return '/my-nodes'
+    if (all_nodes) return '/all-nodes'
+    return '/nodes'
+  }, [isMyNodes, all_nodes])
+
+  const tableStorageKey = useMemo(() => {
+    if (pathname.startsWith('/my-nodes')) return '/my-nodes'
+    if (pathname.startsWith('/nodes')) return '/nodes'
+    return pathname
+  }, [pathname])
+
   const handleProjectFilterChange = useCallback((value: 'all' | 'SAGE' | 'SGT') => {
+    const basePath = value === 'all' ? projectRootPath : projectBasePath
     const suffix = value === 'all' ? '' : `/${value.toLowerCase()}`
-    const paramStr = params.toString()
-    navigate(`${projectBasePath}${suffix}${paramStr ? '?' + paramStr : ''}`)
-  }, [navigate, projectBasePath, params])
+    const paramStr = showSGTDeployments ? '' : params.toString()
+    navigate(`${basePath}${suffix}${paramStr ? '?' + paramStr : ''}`)
+  }, [navigate, projectBasePath, projectRootPath, params, showSGTDeployments])
+
+  const handleSGTStatusClick = useCallback(() => {
+    navigate('/my-nodes/sgt-status')
+  }, [navigate])
 
   // Data state
   const { setLoading } = useProgress()
@@ -126,6 +146,8 @@ export default function Nodes() {
   const [lastUpdate, setLastUpdate] = useState<Date>(null)
   const [selected, setSelected] = useState<BK.NodeState[]>([])
   const [metricsLoaded, setMetricsLoaded] = useState(false)
+  const [usersSGTNodes, setUsersSGTNodes] = useState<BK.Node[] | null>(null)
+  const [visibleSGTNodes, setVisibleSGTNodes] = useState<BK.Node[]>([])
 
   // User project/access data (for all signed-in users)
   const [userVsns, setUserVsns] = useState<string[]>(null)
@@ -134,6 +156,10 @@ export default function Nodes() {
   const [userProjectsList, setUserProjectsList] = useState<User.MyProject[]>(null)
   const [userDataReady, setUserDataReady] = useState(false)
   const [myNodesReady, setMyNodesReady] = useState(false)
+
+  const myNodeVsns = useMemo(() => {
+    return isMyNodes ? userVsns : null
+  }, [isMyNodes, userVsns])
 
   // Filter state
   const [filterState, setFilterState] = useState<FilterState>({})
@@ -161,6 +187,16 @@ export default function Nodes() {
   // Refs
   const dataRef = useRef(null)
   dataRef.current = data
+  const userAccessMapRef = useRef(userAccessMap)
+  const vsnToProjectsMapRef = useRef(vsnToProjectsMap)
+
+  useEffect(() => {
+    userAccessMapRef.current = userAccessMap
+  }, [userAccessMap])
+
+  useEffect(() => {
+    vsnToProjectsMapRef.current = vsnToProjectsMap
+  }, [vsnToProjectsMap])
 
 
   // Fetch user project and access data for all signed-in users
@@ -192,6 +228,11 @@ export default function Nodes() {
       return
     }
 
+    if (showSGTDeployments) {
+      setMyNodesReady(userDataReady)
+      return
+    }
+
     setMyNodesReady(false)
 
     if (!params.has('show_all')) {
@@ -205,18 +246,22 @@ export default function Nodes() {
     if (userDataReady) {
       setMyNodesReady(true)
     }
-  }, [isMyNodes, userDataReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isMyNodes, showSGTDeployments, userDataReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Enrich nodes with user project and access data when available
   const enrichWithProjects = useCallback((nodes) => {
-    if (!vsnToProjectsMap) return nodes
+    const projectsMap = vsnToProjectsMapRef.current
+    const accessMap = userAccessMapRef.current
+
+    if (!projectsMap) return nodes
+
     return nodes.map(node => ({
       ...node,
-      projects: vsnToProjectsMap.get(node.vsn) || '',
-      access: userAccessMap?.[node.vsn] || []
+      projects: projectsMap.get(node.vsn) || '',
+      access: accessMap?.[node.vsn] || []
     }))
-  }, [vsnToProjectsMap, userAccessMap])
+  }, [])
 
 
   // Load and poll node data
@@ -224,26 +269,31 @@ export default function Nodes() {
     if (isMyNodes && !myNodesReady) return // Wait for MyNodes data to be ready
 
     let handle: NodeJS.Timeout
+    let disposed = false
 
     const ping = async () => {
       handle = setTimeout(async () => {
+        if (disposed) return
+
         const metrics = await BH.getNodeData()
+        if (disposed) return
+
         const updatedData = enrichWithProjects(mergeMetrics(dataRef.current, metrics, null, null))
 
         setData(updatedData)
         setLastUpdate(new Date())
-        ping()
+        if (!disposed) ping()
       }, TIME_OUT)
     }
 
     setLoading(true)
 
-    const nodesPromise = isMyNodes && userVsns
-      ? getProjectNodes(sageProject).then(nodes => nodes.filter(node => userVsns.includes(node.vsn)))
-      : getProjectNodes(sageProject)
+    const nodesPromise = isMyNodes && myNodeVsns
+      ? getProjectNodes(projectNodesQuery).then(nodes => nodes.filter(node => myNodeVsns.includes(node.vsn)))
+      : getProjectNodes(projectNodesQuery)
 
     const dataPromise = all_nodes
-      ? nodesPromise.then(nodes => [nodes, []] as [BK.Node[], any[]])
+      ? nodesPromise.then(nodes => [nodes, []] as [BK.Node[], BH.Record[]])
       : Promise.all([nodesPromise, BH.getNodeData()])
 
     setMetricsLoaded(false)
@@ -265,9 +315,10 @@ export default function Nodes() {
       })
 
     return () => {
+      disposed = true
       clearTimeout(handle)
     }
-  }, [sageProject, isMyNodes, myNodesReady, userVsns, enrichWithProjects, all_nodes])
+  }, [projectNodesQuery, isMyNodes, myNodesReady, all_nodes, myNodeVsns, enrichWithProjects, setLoading])
 
 
   // Filter and update data whenever dependencies change
@@ -281,6 +332,10 @@ export default function Nodes() {
     setFilterState(newFilterState)
 
     let result = [...data]
+
+    if (projectFilter !== 'all') {
+      result = result.filter(obj => obj.project === projectFilter)
+    }
 
     // Apply phase filter
     if (phase) {
@@ -311,7 +366,7 @@ export default function Nodes() {
     }
 
     setFiltered(result)
-  }, [data, phase, show_all, all_nodes, query, params, isMyNodes, myNodesReady])
+  }, [data, projectFilter, phase, show_all, all_nodes, query, params, isMyNodes, myNodesReady])
 
 
   // Reset map bounds only when user-initiated filter params change, not on data polls
@@ -381,9 +436,6 @@ export default function Nodes() {
   }, [selected])
 
 
-
-
-
   // Event handlers
   const handleQuery = ({query}) => {
     const newParams = new URLSearchParams(params)
@@ -423,14 +475,6 @@ export default function Nodes() {
     setSelected(sel.objs.length ? sel.objs : [])
   }
 
-
-  const handleQueryViewerChange = (field: string, next: string[]) => {
-    const newParams = new URLSearchParams(params)
-    if (!next.length) newParams.delete(field)
-    else newParams.set(field, next.map(str => `"${str}"`).join(','))
-    setParams(newParams, {replace: true})
-  }
-
   const getSelectedSubset = (selected, nodes) => {
     const vsns = selected.map(o => o.vsn)
     return nodes.filter(obj => vsns.includes(obj.vsn))
@@ -438,15 +482,48 @@ export default function Nodes() {
 
   const hasActiveFilters = Object.values(filterState).some(fList => fList.length > 0)
 
+  useEffect(() => {
+    if (!showSGTDeployments) {
+      setUsersSGTNodes(null)
+      setVisibleSGTNodes([])
+      return
+    }
+
+    if (Auth.isSignedIn && !userDataReady) return
+
+    if (!data) {
+      setUsersSGTNodes(null)
+      return
+    }
+
+    const sgtNodes = data.filter((node) => node.project == 'SGT')
+    const scopedNodes = userVsns
+      ? sgtNodes.filter((node) => userVsns.includes(node.vsn))
+      : sgtNodes
+
+    setUsersSGTNodes(scopedNodes as BK.Node[])
+  }, [data, showSGTDeployments, userDataReady, userVsns])
+
+  const mapData = useMemo(() => {
+    if (showSGTDeployments) {
+      return visibleSGTNodes
+    }
+
+    if (!filtered) return filtered
+    return selected.length ? getSelectedSubset(selected, filtered) : filtered
+  }, [filtered, selected, showSGTDeployments, visibleSGTNodes])
+
   return (
     <Root>
       <Overview className="flex">
         <MapContainer>
           {filtered &&
               <Title>
-                {selected.length
-                  ? `${selected.length} Selected Node${selected.length == 1 ? '' : 's'}`
-                  : `${isMyNodes ? 'My ' : ''}${filtered.length} Node${filtered.length == 1 ? '' : 's'}`
+                {showSGTDeployments
+                  ? `${isMyNodes ? 'My ' : ''}${mapData?.length || 0} Node${(mapData?.length || 0) == 1 ? '' : 's'}`
+                  : (selected.length
+                    ? `${selected.length} Selected Node${selected.length == 1 ? '' : 's'}`
+                    : `${isMyNodes ? 'My ' : ''}${filtered.length} Node${filtered.length == 1 ? '' : 's'}`)
                 }
                 {' '}|{' '}
                 <small>
@@ -455,181 +532,127 @@ export default function Nodes() {
               </Title>
           }
           <MapGL
-            data={selected.length ? getSelectedSubset(selected, filtered) : filtered}
+            data={mapData}
             markerClass={all_nodes ? 'blue-dot' : null}
             updateID={updateID}
           />
         </MapContainer>
-
       </Overview>
 
-      {error &&
+      {showSGTDeployments && (
+        <>
+          <div style={{margin: '1rem 0'}}>
+            <SGTDeployments
+              sgtNodes={usersSGTNodes}
+              initialDefaultPhase="All"
+              initialDefaultLabels={SGT_DEFAULT_LABELS}
+              onVisibleNodesChange={setVisibleSGTNodes}
+              phaseControlsStart={(
+                <SageProjectFilter
+                  projectFilter={projectFilter}
+                  onProjectFilterChange={handleProjectFilterChange}
+                  showSGTStatusButton={isMyNodes}
+                  onSGTStatusClick={handleSGTStatusClick}
+                  isSGTStatusActive={Boolean(showSGTDeployments)}
+                  sgtNodesCount={data?.filter((node) => node.project === 'SGT').length}
+                  sageNodesCount={data?.filter((node) => node.project === 'SAGE').length}
+                />
+              )}
+            />
+          </div>
+        </>
+      )}
+
+      {!showSGTDeployments && error &&
         <Alert severity="error">{error.message}</Alert>
       }
 
-      <TableContainer>
-        {filtered &&
-          <Table
-            primaryKey="id"
-            rows={filtered}
-            columns={cols}
-            enableSorting
-            enableDownload
-            sort="-vsn"
-            search={query}
-            storageKey={pathname}
-            onSearch={handleQuery}
-            onColumnMenuChange={() => { /* do nothing */ }}
-            onSelect={handleSelect}
-            emptyNotice={
-              show_all || all_nodes || query || hasActiveFilters ?
-                <div className="text-center">
-                  <p>No nodes found for this query</p>
-                  {!isMyNodes &&
-                    <small>
-                      Please try using the tab <Link to="/all-nodes">
-                      View All Nodes</Link>, or
-                      the checkbox ( <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={show_all}
-                            onChange={(evt) => handleShowAll(evt)}
-                          />
-                        }
-                        label="Show all"
-                        sx={{marginRight: 0}}
-                      /> ) to show nodes <br/> which are in maintenance, pending deployment, or not reporting.
-                    </small>
-                  }
-                </div> :
-                <span className="text-center">
-                  {metricsLoaded && <i>
-                    A recent issue has delayed node measurement publications and
-                    reporting status, <br/> resulting in data transfer delays and
-                    a "Not Reporting" status across all nodes.
-                    <br/><br/>
-                    Please check back later for updates. We thank you for your patience.
-                    <small>
-                      Consider using the tab <Link to="/nodes/all">View All Nodes</Link>, or
-                      the checkbox ( <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={show_all}
-                            onChange={(evt) => handleShowAll(evt)}
-                          />
-                        }
-                        label="Show all"
-                        sx={{marginRight: 0}}
-                      /> ) to show nodes <br/> which are in maintenance, pending deployment, or not reporting.
-                    </small>
-                  </i>}
-                  {metricsLoaded && <><br/><br/></>}
-                </span>
-            }
-            middleComponent={
-              <FilterControls className="flex items-center">
-
-                {data &&
-                  <SageProjectFilter
-                    projectFilter={projectFilter}
-                    onProjectFilterChange={handleProjectFilterChange}
-                    sgtNodesCount={!sageProject ? data.filter(node => node.project === 'SGT').length : null}
-                    sageNodesCount={!sageProject ? data.filter(node => node.project === 'SAGE').length : null}
-                  />
-                }
-
-                {filterOptions.projects && isMyNodes &&
-                  <FilterMenu
-                    label="Project"
-                    options={filterOptions.projects}
-                    value={filterState.project}
-                    onChange={vals => handleFilterChange('project', vals as Option[])}
-                    noSelectedSort
-                  />
-                }
-                {filterOptions.focuses &&
-                  <FilterMenu
-                    label="Focus"
-                    options={filterOptions.focuses}
-                    value={filterState.focus}
-                    onChange={vals => handleFilterChange('focus', vals as Option[])}
-                    noSelectedSort
-                  />
-                }
-                {filterOptions.cities &&
-                  <FilterMenu
-                    label="City"
-                    options={filterOptions.cities}
-                    value={filterState.city}
-                    onChange={vals => handleFilterChange('city', vals as Option[])}
-                  />
-                }
-                {filterOptions.states &&
-                  <FilterMenu
-                    label="State"
-                    options={filterOptions.states}
-                    value={filterState.state}
-                    onChange={vals => handleFilterChange('state', vals as Option[])}
-                  />
-                }
-                {filterOptions.sensors &&
-                  <FilterMenu
-                    label="Sensors"
-                    options={filterOptions.sensors}
-                    value={filterState.sensor}
-                    onChange={vals => handleFilterChange('sensor', vals as Option[])}
-                  />
-                }
-                {!all_nodes &&
-                  <Tooltip
-                    sx={{mx: 1}}
-                    placement="top"
-                    title={
-                      <>Show nodes which are in maintenance, pending deployment, or not reporting.</>
+      {!showSGTDeployments && (
+        <TableContainer>
+          {filtered &&
+            <Table
+              primaryKey="id"
+              rows={filtered}
+              columns={cols}
+              enableSorting
+              enableDownload
+              sort="-vsn"
+              search={query}
+              storageKey={tableStorageKey}
+              onSearch={handleQuery}
+              onColumnMenuChange={() => { /* do nothing */ }}
+              onSelect={handleSelect}
+              emptyNotice={
+                show_all || all_nodes || query || hasActiveFilters ?
+                  <div className="text-center">
+                    <p>No nodes found for this query</p>
+                    {!isMyNodes &&
+                      <small>
+                        Consider using the tab <Link to="/all-nodes">
+                        View All Nodes</Link> or
+                        the checkbox ( <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={show_all}
+                              onChange={(evt) => handleShowAll(evt)}
+                            />
+                          }
+                          label="Show all"
+                          sx={{marginRight: 0}}
+                        /> ) to show nodes <br/> which are in maintenance, awaiting deployment, or not reporting.
+                      </small>
                     }
-                  >
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={show_all}
-                          onChange={(evt) => handleShowAll(evt)}
-                        />
-                      }
-                      label="Show all"
-                    />
-                  </Tooltip>
-                }
-                {hasActiveFilters  &&
-                  <>
-                    <VertDivider />
-                    <Button variant="contained"
-                      color="primary"
-                      size="small"
-                      onClick={handleRemoveFilters}
-                      style={{backgroundColor: '#1c8cc9'}}
-                      startIcon={<UndoIcon />}
-                    >
-                      Clear
-                    </Button>
-                  </>
-                }
-
-                <QueryViewer
+                  </div> :
+                  <span className="text-center">
+                    {metricsLoaded && <i>
+                      A recent issue has delayed node measurement publications and
+                      reporting status, <br/> resulting in data transfer delays and
+                      a "Not Reporting" status across all nodes.
+                      <br/><br/>
+                      Please check back later for updates. We thank you for your patience.
+                      <small>
+                        Consider using the tab <Link to="/nodes/all">View All Nodes</Link>, or
+                        the checkbox ( <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={show_all}
+                              onChange={(evt) => handleShowAll(evt)}
+                            />
+                          }
+                          label="Show all"
+                          sx={{marginRight: 0}}
+                        /> ) to show nodes <br/> which are in maintenance, pending deployment, or not reporting.
+                      </small>
+                    </i>}
+                    {metricsLoaded && <><br/><br/></>}
+                  </span>
+              }
+              middleComponent={
+                <NodesFilterCtrls
+                  className="flex items-center"
+                  data={data}
+                  projectFilter={projectFilter}
+                  onProjectFilterChange={handleProjectFilterChange}
+                  showSGTStatusButton={isMyNodes}
+                  onSGTStatusClick={handleSGTStatusClick}
+                  isSGTStatusActive={Boolean(showSGTDeployments)}
+                  filterOptions={filterOptions}
+                  isMyNodes={isMyNodes}
                   filterState={filterState}
-                  onDelete={handleQueryViewerChange}
+                  onFilterChange={handleFilterChange}
+                  allNodes={all_nodes}
+                  showAll={show_all}
+                  onShowAllChange={handleShowAll}
+                  onClearFilters={handleRemoveFilters}
                 />
-              </FilterControls>
-            }
-          />
-        }
-      </TableContainer>
+              }
+            />
+          }
+        </TableContainer>
+      )}
     </Root>
   )
 }
-
-
-const VertDivider = () =>
-  <Divider orientation="vertical" flexItem style={{margin: '5px 15px 5px 15px' }} />
 
 
 const Root = styled('div')``
@@ -670,8 +693,4 @@ const TableContainer = styled('div')`
   tr:hover .edit-btn {
     visibility: visible;
   }
-`
-
-const FilterControls = styled('div')`
-  margin-left: 1.5em;
 `
