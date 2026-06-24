@@ -28,7 +28,7 @@ import MetricsJobs from './views/metrics/MetricsJobs'
 import MetricsAccounts from './views/metrics/MetricsAccounts'
 import MetricsUploads from './views/metrics/MetricsUploads'
 import MetricsAtAGlance from './views/metrics/MetricsAtAGlance'
-import SGTDeployments from './views/sgt-deployments/SGTDeployments'
+import SGTDeployments from '/components/views/sgt-deployments/SGTDeployments'
 
 import MonitorIcon from '@mui/icons-material/MonitorHeartOutlined'
 import ImageIcon from '@mui/icons-material/ImageOutlined'

@@ -3,11 +3,10 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 import { LABEL_FIELD_OPTIONS, type LabelFieldId, type SortDirection, type SortOptionId } from './types'
 import { DeleteOutline } from '@mui/icons-material'
+import SortCarets from './SortCarets'
 
 type Props = {
   labelFields: LabelFieldId[]
@@ -51,8 +50,8 @@ function CaretColumn({ label, sortId, activeSortId, sortDirection, onSort, child
             component="span"
             variant="caption"
             sx={{
-              fontSize: '0.68rem',
-              fontWeight: isActive ? 700 : 500,
+              fontSize: '0.74rem',
+              fontWeight: isActive ? 700 : 600,
               color: isActive ? 'primary.main' : 'text.secondary',
               lineHeight: 1,
             }}
@@ -62,44 +61,12 @@ function CaretColumn({ label, sortId, activeSortId, sortDirection, onSort, child
           {children}
         </Box>
       </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Tooltip title={`Sort ${label} ascending`} placement="top" arrow>
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => onSort(sortId, 'asc')}
-              sx={{ p: 0, lineHeight: 1 }}
-              aria-label={`Sort ${label} ascending`}
-            >
-              <ExpandLessIcon
-                sx={{
-                  fontSize: '1.14rem',
-                  color: isActive && sortDirection == 'asc' ? 'primary.main' : 'text.secondary',
-                  opacity: isActive && sortDirection == 'asc' ? 1 : 0.45,
-                }}
-              />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title={`Sort ${label} descending`} arrow>
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => onSort(sortId, 'desc')}
-              sx={{ p: 0, lineHeight: 1, mt: -2 }}
-              aria-label={`Sort ${label} descending`}
-            >
-              <ExpandMoreIcon
-                sx={{
-                  fontSize: '1.14rem',
-                  color: isActive && sortDirection == 'desc' ? 'primary.main' : 'text.secondary',
-                  opacity: isActive && sortDirection == 'desc' ? 1 : 0.45,
-                }}
-              />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
+      <SortCarets
+        label={label}
+        isActive={isActive}
+        sortDirection={sortDirection}
+        onSort={(direction) => onSort(sortId, direction)}
+      />
     </>
   )
 }
@@ -170,26 +137,6 @@ export default function SortStrip({ labelFields, activeSortId, sortDirection, on
         })}
       </Box>
 
-      <Box
-        sx={{
-          ml: 'auto',
-          mt: -1,
-          mr: '15rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          px: 0.25,
-          pointerEvents: 'auto',
-        }}
-      >
-        <CaretColumn
-          label="Status"
-          sortId="up_down"
-          activeSortId={activeSortId}
-          sortDirection={sortDirection}
-          onSort={onSort}
-        />
-      </Box>
     </Box>
   )
 }

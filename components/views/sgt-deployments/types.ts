@@ -45,7 +45,7 @@ export type RowInfo = {
 
 export type LabelFieldId = 'site_id' | 'phase' | 'partner' | 'vsn'
 
-export type SortOptionId = 'none' | 'site_id' | 'phase' | 'partner' | 'vsn' | 'up_down'
+export type SortOptionId = 'none' | 'site_id' | 'phase' | 'partner' | 'vsn' | 'up_down' | 'beehive_status'
 
 export type PhaseFilterOption = BK.Phase | 'All'
 
@@ -65,7 +65,7 @@ export const LABEL_FIELD_OPTIONS: LabelFieldOption[] = [
   { id: 'phase', label: 'Phase' },
   { id: 'partner', label: 'Partner' },
   { id: 'site_id', label: 'Site ID' },
-  { id: 'vsn', label: 'VSN' },
+  { id: 'vsn', label: 'Node' },
 ]
 
 export const DEFAULT_LABEL_FIELDS: LabelFieldId[] = ['site_id', 'vsn', 'partner']
@@ -75,8 +75,9 @@ export const SORT_OPTIONS: SortOption[] = [
   { id: 'site_id', label: 'Site ID' },
   { id: 'phase', label: 'Phase' },
   { id: 'partner', label: 'Partner' },
-  { id: 'vsn', label: 'VSN' },
-  { id: 'up_down', label: 'Up/Down (last hour)' }
+  { id: 'vsn', label: 'Node (VSN/ID)' },
+  { id: 'up_down', label: 'Up/Down (last hour)' },
+  { id: 'beehive_status', label: 'Beehive status' }
 ]
 
 export const PHASE_OPTIONS: PhaseFilterOption[] = ['All', ...Object.values(BK.phaseMap)]

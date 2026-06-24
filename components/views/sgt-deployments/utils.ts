@@ -16,6 +16,7 @@ import {
   type RowInfo,
   type SortDirection,
   type SortOption,
+  type SortOptionId,
   type TimelineData,
   type TimelineEntry,
 } from './types'
@@ -143,6 +144,112 @@ export function getPrometheusURL(start: Date, end: Date, stepSeconds: number): s
   })
 
   return `${PROMETHEUS_URL}?${params.toString()}`
+}
+
+export function formatDuration(start: Date, end: Date | null): string {
+  const endTs = end ? end.getTime() : Date.now()
+  const diffMs = Math.max(0, endTs - start.getTime())
+  const totalSeconds = Math.floor(diffMs / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days}d`)
+  if (days > 0 || hours > 0) parts.push(`${hours}h`)
+  if (days > 0 || hours > 0 || minutes > 0) parts.push(`${minutes}m`)
+  parts.push(`${seconds}s`)
+  return parts.join(' ')
+}
+
+type TimelineRowComparatorContext = {
+  rowInfoByKey: Record<string, RowInfo>
+  displayLabelByKey: Record<string, string>
+  deployedNodeOrder: Map<string, number>
+  endTime: Date
+  sortById: SortOptionId
+  sortDirection: SortDirection
+  statusMap: Record<string, { status?: string }>
+}
+
+export function createTimelineRowComparator(ctx: TimelineRowComparatorContext) {
+  const { rowInfoByKey, displayLabelByKey, deployedNodeOrder, endTime, sortById, sortDirection, statusMap } = ctx
+  const directionFactor = sortDirection == 'desc' ? -1 : 1
+
+  return ([rowKeyA, entriesA]: [string, TimelineEntry[]], [rowKeyB, entriesB]: [string, TimelineEntry[]]): number => {
+    const rowA = rowInfoByKey[rowKeyA] || { vsn: '', siteId: '', phase: 'Deployed' as BK.Phase, partner: '' }
+    const rowB = rowInfoByKey[rowKeyB] || { vsn: '', siteId: '', phase: 'Deployed' as BK.Phase, partner: '' }
+    const labelA = displayLabelByKey[rowKeyA] || rowKeyA
+    const labelB = displayLabelByKey[rowKeyB] || rowKeyB
+
+    if (sortById == 'none') {
+      return (deployedNodeOrder.get(rowKeyA) ?? Number.MAX_SAFE_INTEGER) -
+        (deployedNodeOrder.get(rowKeyB) ?? Number.MAX_SAFE_INTEGER)
+    }
+
+    if (sortById == 'up_down') {
+      const stateA = getLastHourState(entriesA, endTime)
+      const stateB = getLastHourState(entriesB, endTime)
+
+      if (stateA != stateB) {
+        return (stateA == 'down' ? -1 : 1) * directionFactor
+      }
+
+      const downtimeA = getLastHourDowntimeMs(entriesA, endTime)
+      const downtimeB = getLastHourDowntimeMs(entriesB, endTime)
+
+      if (downtimeA != downtimeB) {
+        return (downtimeB - downtimeA) * directionFactor
+      }
+
+      return compareStrings(labelA, labelB) * directionFactor
+    }
+
+    if (sortById == 'beehive_status') {
+      const statusA = statusMap[rowKeyA]?.status || 'not reporting'
+      const statusB = statusMap[rowKeyB]?.status || 'not reporting'
+
+      const rank = (phase: BK.Phase, status: string) => {
+        if (phase == 'Deployed' && status == 'reporting') return 3
+        if ((phase == 'Awaiting Deployment' || phase == 'Shipment Pending') && status == 'reporting') return 2
+        if (phase == 'Maintenance') return 1
+        return 0
+      }
+
+      const rankA = rank(rowA.phase, statusA)
+      const rankB = rank(rowB.phase, statusB)
+
+      if (rankA != rankB) {
+        return (rankA - rankB) * directionFactor
+      }
+
+      const byStatus = compareStrings(statusA, statusB)
+      if (byStatus != 0) return byStatus * directionFactor
+
+      return compareStrings(labelA, labelB) * directionFactor
+    }
+
+    if (sortById == 'site_id') {
+      const bySiteId = compareStrings(rowA.siteId, rowB.siteId)
+      if (bySiteId != 0) return bySiteId * directionFactor
+      return compareStrings(rowA.vsn, rowB.vsn) * directionFactor
+    }
+
+    if (sortById == 'phase') {
+      const byPhase = compareStrings(rowA.phase, rowB.phase)
+      if (byPhase != 0) return byPhase * directionFactor
+      return compareStrings(rowA.vsn, rowB.vsn) * directionFactor
+    }
+
+    if (sortById == 'partner') {
+      const byPartner = compareStrings(rowA.partner, rowB.partner)
+      if (byPartner != 0) return byPartner * directionFactor
+      return compareStrings(rowA.vsn, rowB.vsn) * directionFactor
+    }
+
+    return compareStrings(rowA.vsn, rowB.vsn) * directionFactor
+  }
 }
 
 export function toTimelineData(

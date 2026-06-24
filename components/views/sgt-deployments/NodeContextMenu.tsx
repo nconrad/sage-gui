@@ -2,6 +2,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 
 import { ListSubheader } from '/components/layout/Layout'
+import useIsStaff from '/components/hooks/useIsStaff'
 
 type Props = {
   open: boolean
@@ -22,6 +23,8 @@ export default function NodeContextMenu({
   grafanaUrl,
   onClose,
 }: Props) {
+  const {isStaff} = useIsStaff()
+
   return (
     <Menu
       open={open}
@@ -43,7 +46,7 @@ export default function NodeContextMenu({
           Portal node page
         </MenuItem>
       )}
-      {grafanaUrl && (
+      {isStaff && grafanaUrl && (
         <MenuItem
           component="a"
           href={grafanaUrl}
