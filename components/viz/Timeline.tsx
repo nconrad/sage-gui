@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useRef, useState, memo } from 'react'
+import { useEffect, useRef, useState, memo, type ReactNode } from 'react'
 import styled from 'styled-components'
 
 import * as d3 from 'd3'
@@ -205,6 +205,7 @@ function renderSVGCells(args) {
     colorCell,
     tooltip,
     rowHeight,
+    clipId,
     // tooltipPos,
     colorScale
   } = args
@@ -212,6 +213,7 @@ function renderSVGCells(args) {
   // add cell container
   const cells = svg.append('g')
     .attr('width', width)
+    .attr('clip-path', `url(#${clipId})`)
     .style('cursor', onCellClick ? 'pointer' : 'auto')
     .attr('transform', `translate(${margin.left}, ${margin.top})`)
 
@@ -359,6 +361,15 @@ function drawChart(
     .attr('height', svgHeight)
     .attr('cursor', 'grab')
 
+  const clipId = `timeline-clip-${Math.random().toString(36).slice(2)}`
+  svg.append('defs')
+    .append('clipPath')
+    .attr('id', clipId)
+    .append('rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('width', width)
+    .attr('height', height)
 
   const gX = svg.append('g')
     .attr('cursor', 'grab')
@@ -375,7 +386,7 @@ function drawChart(
   } else {
     const svgResult = renderSVGCells({
       svg, domEle, data, x, y, width, tooltip, tooltipPos, rowHeight,
-      computeWidth, onCellClick, colorCell, colorScale
+      computeWidth, onCellClick, colorCell, colorScale, clipId
     })
     cells = svgResult.cells
     tt = svgResult.tt
@@ -648,6 +659,10 @@ export type TimelineProps = {
   limitRowCount?: number
   cellUnit?: 'hour' | 'day'
   yFormat?: (label: string) => string | JSX.Element
+  rowEndFormat?: (label: string) => string | JSX.Element
+  rowEndHeader?: ReactNode
+  rowEndWidth?: number
+  rowEndHeaderOffsetY?: number
   useD3YAxis?: boolean
   onRowClick?: (label: string, items: Record[]) => void
   onCellClick?: (item: Record, evt?: MouseEvent) => void
@@ -663,13 +678,26 @@ export type TimelineProps = {
 function Chart(props: TimelineProps) {
   const {
     data,
+    startTime,
+    endTime,
+    scaleExtent,
+    yFormat,
+    tooltip,
+    tooltipPos,
+    touchIntervals,
+    tooltipAnchorVisibleCenter,
+    onCellClick,
+    onRowClick,
+    colorCell,
+    cellUnit,
     cellHeightPx,
     labelWidth,
+    rowEndWidth,
+    rowEndHeaderOffsetY,
     showLegend,
     showButtons = true,
     limitRowCount,
     useD3YAxis = false,
-    ...rest
   } = props
 
   const rowHeight = cellHeightPx || cellHeight
@@ -679,7 +707,18 @@ function Chart(props: TimelineProps) {
   const [labels, setLabels] = useState(null)
 
   const ref = useRef(null)
+  const tooltipRef = useRef<TimelineProps['tooltip']>(tooltip)
+  const yFormatRef = useRef<TimelineProps['yFormat']>(yFormat)
+  const onCellClickRef = useRef<TimelineProps['onCellClick']>(onCellClick)
+  const onRowClickRef = useRef<TimelineProps['onRowClick']>(onRowClick)
   // const legendRef = useRef(null)
+
+  useEffect(() => {
+    tooltipRef.current = tooltip
+    yFormatRef.current = yFormat
+    onCellClickRef.current = onCellClick
+    onRowClickRef.current = onRowClick
+  }, [onCellClick, onRowClick, tooltip, yFormat])
 
   useEffect(() => {
     const node = ref.current
@@ -729,10 +768,21 @@ function Chart(props: TimelineProps) {
         yLabels,
         width,
         size,
+        startTime,
+        endTime,
+        scaleExtent,
+        yFormat: yFormatRef.current,
+        tooltip: tooltipRef.current,
+        tooltipPos,
+        touchIntervals,
+        tooltipAnchorVisibleCenter,
+        onCellClick: onCellClickRef.current,
+        onRowClick: onRowClickRef.current,
+        colorCell,
+        cellUnit,
         cellHeightPx,
         labelWidth,
         useD3YAxis,
-        ...rest
       })
     })
 
@@ -749,7 +799,24 @@ function Chart(props: TimelineProps) {
     return () => {
       ro.unobserve(node)
     }
-  }, [data, rest, margin, showLegend, limitRowCount])
+  }, [
+    cellUnit,
+    cellHeightPx,
+    colorCell,
+    data,
+    endTime,
+    labelWidth,
+    labels,
+    limitRowCount,
+    scaleExtent,
+    showAllRows,
+    showLegend,
+    startTime,
+    tooltipAnchorVisibleCenter,
+    tooltipPos,
+    touchIntervals,
+    useD3YAxis,
+  ])
 
 
   return (
@@ -759,14 +826,20 @@ function Chart(props: TimelineProps) {
 
       {/* controls */}
       {showButtons &&
-        <Ctrls style={{marginRight: margin.right}}>
-          {/* note: controls are assumed to be a direct child node for events */}
-          <button className="btn reset" title="reset zoom/panning"><HomeIcon /></button>
-          <button className="btn pan-left" title="pan left"><ArrowLeft /></button>
-          <button className="btn zoom-in" title="zoom in"><ZoomInIcon /></button>
-          <button className="btn zoom-out" title="zoom out"><ZoomOutIcon /></button>
-          <button className="btn pan-right" title="pan right"><ArrowRight /></button>
-        </Ctrls>
+        <div className="flex w-full" style={{marginBottom: 8}}>
+          {labels && <div style={{width: labelWidth}} />}
+
+          <Ctrls>
+            {/* note: controls are assumed to be a direct child node for events */}
+            <button className="btn reset" title="reset zoom/panning"><HomeIcon /></button>
+            <button className="btn pan-left" title="pan left"><ArrowLeft /></button>
+            <button className="btn zoom-in" title="zoom in"><ZoomInIcon /></button>
+            <button className="btn zoom-out" title="zoom out"><ZoomOutIcon /></button>
+            <button className="btn pan-right" title="pan right"><ArrowRight /></button>
+          </Ctrls>
+
+          {labels && props.rowEndFormat && <div style={{width: rowEndWidth || 90}} />}
+        </div>
       }
 
       <div className="flex w-full">
@@ -786,6 +859,26 @@ function Chart(props: TimelineProps) {
         {/* d3.js timeline chart */}
         {/* note: for canvas we'll need `position: 'relative'` */}
         <div ref={ref} className="w-full"></div>
+
+        {/* optional end-of-row labels column */}
+        {labels && props.rowEndFormat &&
+          <div style={{marginTop: margin.top, marginLeft: 0, width: rowEndWidth || 90}}>
+            {props.rowEndHeader &&
+              <div style={{height: 0, position: 'relative'}}>
+                <div style={{position: 'absolute', top: rowEndHeaderOffsetY ?? -20, left: 0}}>{props.rowEndHeader}</div>
+              </div>
+            }
+
+            <TimelineLabels
+              labels={labels}
+              data={data}
+              formatter={props.rowEndFormat}
+              margin={margin}
+              rowHeightPx={rowHeight}
+              align="start"
+            />
+          </div>
+        }
       </div>
 
 
@@ -817,7 +910,10 @@ export default memo(function TimelineContainer(props: TimelineProps) {
   prev.data === next.data &&
   prev.colorCell === next.colorCell &&
   prev.onRowClick === next.onRowClick &&
-  prev.onCellClick === next.onCellClick
+  prev.onCellClick === next.onCellClick &&
+  prev.rowEndFormat === next.rowEndFormat &&
+  prev.rowEndHeader === next.rowEndHeader &&
+  prev.yFormat === next.yFormat
 )
 
 const Root = styled.div<{colorLinks: boolean}>`
@@ -893,8 +989,9 @@ const Root = styled.div<{colorLinks: boolean}>`
 `
 
 const Ctrls = styled.div`
-  float: right;
-  margin: 0 20px 15px 15px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
 
   .reset {
     margin-right: 15px;
